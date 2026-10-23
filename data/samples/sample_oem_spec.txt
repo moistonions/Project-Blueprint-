@@ -1,0 +1,12 @@
+SYNTHETIC SAMPLE - NOT A REAL OEM MANUAL. FOR PIPELINE TESTING ONLY.
+
+Fictional Model SP-100 Centrifugal Pump (asset SAMPLE-PUMP-01)
+Section 7: Preventive Maintenance Schedule
+
+Item 1. Replace mechanical seal kit, part SK-100-01, every 8000 operating hours or 24 months, whichever comes first.
+
+Item 2. Lubricate motor bearings with grease cartridge GR-220 every 2000 operating hours or 6 months, whichever comes first.
+
+Item 3. Inspect coupling alignment every 12 months.
+
+Item 4. Replace suction strainer element, part ST-100-04, every 4000 operating hours.
