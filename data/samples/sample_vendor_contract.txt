@@ -1,0 +1,16 @@
+SYNTHETIC SAMPLE - NOT A REAL VENDOR CONTRACT. FOR PIPELINE TESTING ONLY.
+Gaps against the sample OEM spec are planted on purpose; see planted_gaps.json.
+
+Example Power Services Ltd (fictional) - Schedule C: Planned Maintenance, asset SAMPLE-GEN-01
+Intervals are whichever comes first.
+
+C.1 Change engine oil and oil filter SG-OF-10 with SAE 10W-30 oil every 250 hours or 6 months.
+C.2 Change fuel filter SG-FF-20 every 525 hours or 12 months.
+C.3 Change air filter element SG-AF-30 every 750 hours or 12 months.
+C.4 Replace coolant (ELC 50/50) every 3000 hours or 36 months.
+C.5 Check drive belt tension every 250 hours or 6 months.
+C.6 Check starting battery and charger every month.
+C.7 Test e-stop and shutdown safety devices every 27 weeks.
+C.8 Replace crankcase breather filter SG-BF-41 every 1000 hours.
+C.9 Inspect exhaust system for leaks every 250 hours or 6 months.
+C.10 Clean radiator fins every 3 months.

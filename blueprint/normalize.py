@@ -7,6 +7,7 @@ answer every time for the same extracted data.
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from enum import Enum
 
 from blueprint.models import Interval, IntervalUnit, MaintenanceTask
@@ -97,9 +98,97 @@ def canonical_action(action: str) -> str:
     return word
 
 
+# Shorthand common in vendor schedules and checklists.
+_ABBREVIATIONS = {
+    "hyd": "hydraulic",
+    "eng": "engine",
+    "trans": "transmission",
+    "alt": "alternator",
+    "gen": "generator",
+    "elem": "element",
+    "brg": "bearing",
+    "brgs": "bearing",
+    "assy": "assembly",
+    "e": "emergency",
+}
+
+
+def component_tokens(component: str) -> frozenset[str]:
+    out = set()
+    for w in _tokens(component):
+        w = _ABBREVIATIONS.get(w, w)
+        if len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+            w = w[:-1]  # filters -> filter, bearings -> bearing
+        out.add(w)
+    return frozenset(out)
+
+
 def canonical_component(component: str) -> str:
-    return " ".join(sorted(_tokens(component)))
+    return " ".join(sorted(component_tokens(component)))
+
+
+# Words that say what kind of part something is, not which one.
+_GENERIC = {"filter", "element", "system", "device", "unit", "assembly", "kit", "hose", "belt", "valve", "pump"}
+
+
+def component_similarity(a: str, b: str) -> float:
+    """0-1 similarity of two component names.
+
+    Token containment catches "hyd filters" vs "hydraulic return filter" and
+    "coolant" vs "engine coolant"; a character ratio catches spelling variants.
+    A one-word name made of a generic word ("filter") must match exactly, so it
+    doesn't pair with every filter on the asset.
+    """
+    ta, tb = component_tokens(a), component_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    small = min(ta, tb, key=len)
+    if len(small) == 1 and small <= _GENERIC:
+        containment = float(ta == tb)
+    else:
+        containment = len(ta & tb) / len(small)
+    ratio = SequenceMatcher(None, canonical_component(a), canonical_component(b)).ratio()
+    return max(containment, ratio)
 
 
 def task_key(task: MaintenanceTask) -> str:
     return f"{canonical_component(task.component)}|{canonical_action(task.action)}"
+
+
+def canonical_spec(spec: str | None) -> str:
+    """'SAE 15W-40' == 'sae15w40'; empty when no spec is given."""
+    return re.sub(r"[^a-z0-9]", "", (spec or "").lower())
+
+
+def canonical_parts(part_ids: list[str]) -> set[str]:
+    return {canonical_spec(p) for p in part_ids if canonical_spec(p)}
+
+
+_UNIT_ALIASES: dict[str, IntervalUnit] = {
+    **{a: IntervalUnit.HOURS for a in ("h", "hr", "hrs", "hour", "hours")},
+    **{a: IntervalUnit.DAYS for a in ("d", "day", "days")},
+    **{a: IntervalUnit.WEEKS for a in ("wk", "wks", "week", "weeks")},
+    **{a: IntervalUnit.MONTHS for a in ("mo", "mos", "month", "months")},
+    **{a: IntervalUnit.YEARS for a in ("y", "yr", "yrs", "year", "years")},
+    **{a: IntervalUnit.KM for a in ("km", "kms")},
+    **{a: IntervalUnit.MILES for a in ("mi", "mile", "miles")},
+    **{a: IntervalUnit.CYCLES for a in ("cycle", "cycles", "starts")},
+}
+
+
+def format_intervals(intervals: list[Interval]) -> str:
+    return "; ".join(f"{iv.value:g} {iv.unit.value}" for iv in intervals)
+
+
+def parse_intervals(text: str) -> list[Interval]:
+    """'250 hours; 6 months' or '250 h or 6 mo' -> intervals. Raises ValueError on anything else."""
+    out = []
+    for part in re.split(r";|,|\bor\b", text or ""):
+        part = part.strip()
+        if not part:
+            continue
+        m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([a-zA-Z]+)", part)
+        if not m or m.group(2).lower() not in _UNIT_ALIASES:
+            raise ValueError(f"Can't read interval '{part}'. Use e.g. '250 hours; 6 months'.")
+        out.append(Interval(value=float(m.group(1)), unit=_UNIT_ALIASES[m.group(2).lower()]))
+    return out

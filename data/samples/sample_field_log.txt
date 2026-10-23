@@ -1,7 +1,0 @@
-SYNTHETIC SAMPLE - NOT A REAL FIELD LOG. FOR PIPELINE TESTING ONLY.
-
-Service note 2025-03-14, SAMPLE-PUMP-01, technician T. Example (fictional):
-Pump runs on slurry return line with high fines content. Found heavy deposits on impeller vanes and volute, flow down 12 percent. Agreed with site lead to add six-monthly impeller and volute clean to the schedule.
-
-Service note 2025-06-02, SAMPLE-PUMP-01:
-Bearing housing running at 85 C due to high ambient temperature in pump house. Grease degrading early. Moved motor bearing greasing to every 1000 hours or 3 months until ventilation upgrade is done.

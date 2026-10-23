@@ -26,6 +26,8 @@ def source_label(h: Hit) -> str:
         return f"Gap finding · {m.get('asset_id')} · {m.get('vendor') or 'n/a'}"
     if m.get("type") == "rationale":
         return f"Vendor rationale · {m.get('asset_id')} · {m.get('vendor') or 'n/a'}"
+    if m.get("type") == "ticket":
+        return f"Vendor {m.get('filename')} · {m.get('asset_id')}"
     return f"{m.get('filename', '?')} p.{m.get('page', '?')} ({m.get('kind', '?')})"
 
 

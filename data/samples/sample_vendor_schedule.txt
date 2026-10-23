@@ -1,8 +1,0 @@
-SYNTHETIC SAMPLE - NOT A REAL VENDOR CONTRACT. FOR PIPELINE TESTING ONLY.
-
-Example Services Ltd (fictional) - Schedule B: Planned Maintenance for SAMPLE-PUMP-01
-
-B.1 Change mechanical seal kit SK-100-01 every 30 months.
-B.2 Grease motor bearings (GR-220) every 1000 operating hours or 3 months, whichever comes first.
-B.3 Replace suction strainer element ST-100-04 every 4000 operating hours.
-B.4 Clean impeller and volute every 6 months.

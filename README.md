@@ -16,45 +16,72 @@ documents, and a chat page lets engineers ask questions across all of it.
 ## How it works
 
 ```
-upload ──► read pages ──► OpenAI structured extraction ──► SQLite (tasks)
-   │                         (OEM + vendor docs only)            │
-   │                                                             ▼
-   └──► chunk + embed ──► Chroma ◄── findings ◄── rules engine (deterministic)
-                            ▲  │                         │
-                            │  └──► rationale agent ◄────┘ vendor additions /
-                            │            │                 tightened intervals
-                            └── rationales
-                            ▲
-           Ask page (RAG chat) queries everything above
+OEM manual ──► extract tasks ──► person signs off baseline ─┐   (needs-review tasks = failed)
+vendor contract ──► extract tasks ──────────────────────────┼─► rules engine ──► gap findings
+vendor checklists (CSV or form) ──► tickets + meter hours ──┘   (deterministic)      │
+        │ notes                                                                      │
+        ▼                                                                            ▼
+     Chroma ◄──────────── rationale agent (vendor does more: quote-verified) ◄── info findings
+        ▲
+        └── Ask page (RAG chat over documents, tickets, findings, rationales)
 ```
 
 | Module | Role |
 | --- | --- |
 | `blueprint/ingest.py` | PDF/TXT/MD/CSV/EML to page text and overlapping chunks |
-| `blueprint/extract.py` | OpenAI structured outputs: asset, component, action, part IDs, intervals, source quote, page |
-| `blueprint/normalize.py` | Unit normalization (months to days, miles to km...) and canonical task keys (`change` = `replace`) |
-| `blueprint/rules.py` | **Deterministic** OEM vs vendor comparison. No LLM. |
-| `blueprint/rationale.py` | Retrieval + LLM agent explaining vendor additions; marks them `UNDOCUMENTED` when no evidence exists |
+| `blueprint/extract.py` | OpenAI structured outputs: component, action, part IDs, fluid spec, intervals, source quote, page, needs-review flag |
+| `blueprint/normalize.py` | Unit normalization (months to days, miles to km...), canonical task keys (`change` = `replace`), fuzzy component matching |
+| `blueprint/rules.py` | **Deterministic** approved-OEM-baseline vs vendor schedule comparison. No LLM. |
+| `blueprint/execution.py` | **Deterministic** late/skipped check from checklist tickets and hour-meter readings |
+| `blueprint/tickets.py` | Vendor checklist CSV import (format provisional) |
+| `blueprint/rationale.py` | Retrieval + LLM agent explaining vendor extras; keeps only quotes found verbatim in the evidence |
 | `blueprint/rag.py` | Chat answers with numbered citations |
-| `blueprint/stores/structured.py` | SQLite: documents, tasks, findings, rationales |
+| `blueprint/stores/structured.py` | SQLite: documents (with baseline status), tasks, tickets, findings, rationales |
 | `blueprint/stores/vector.py` | `VectorStore` interface + `ChromaStore`. Add a `PgVectorStore` here to switch to pgvector. |
-| `app.py` | Streamlit UI: Ingest, Gap report, Field wisdom, Ask |
+| `app.py` | Streamlit UI: Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask |
 
-### What the rules engine flags
+### Baseline sign-off
+
+Nothing is compared until a person approves the OEM task list extracted from a
+manual (Baseline sign-off page). There they can fix extraction errors, mark
+**safety-critical** tasks (zero tolerance) and resolve tasks the extractor
+flagged **needs review** (garbled tables, "as required"). Unresolved needs-review
+tasks count as failed in the report. Saving any edit returns the baseline to draft.
+
+### What the engine flags
+
+Intervals are "whichever comes first" across calendar time, running hours,
+distance and cycles; every dimension is checked.
 
 | Finding | Severity | Meaning |
 | --- | --- | --- |
 | `missing_task` | critical | OEM task with no matching vendor task |
-| `extended_interval` | critical | Vendor interval longer than OEM in any dimension (calendar, hours, distance, cycles), beyond a 2% unit-conversion tolerance |
-| `missing_interval_basis` | warning | OEM says "500 h **or** 6 months" but the vendor only tracks one of them, or states no interval |
+| `beyond_tolerance` | critical | Vendor interval longer than OEM by more than the tolerance (10% by default, `BLUEPRINT_TOLERANCE`; 0 for safety-critical tasks) |
+| `longer_interval` | warning | Vendor interval longer than OEM but within tolerance |
+| `spec_mismatch` | warning | Different part number or fluid spec on a matched task (flagged as ambiguous) |
+| `missing_interval_basis` | warning | OEM says "500 h **or** 6 months" but the vendor only tracks one, or states no interval |
+| `execution_gap` | critical | Checklist tickets show the task done late, or not done since a date |
+| `needs_review` | critical (failed) | OEM task the extractor wasn't sure about, not yet resolved at sign-off |
 | `tightened_interval` | info | Vendor services more often than OEM. Sent to the rationale agent. |
 | `vendor_addition` | info | Vendor task the OEM doesn't require. Sent to the rationale agent. |
 
-Tasks are paired one-to-one per asset by exact task key, then same action +
-shared part number, then same action + similar component name. Matching is the
-part most likely to need tuning on real manuals; anything that fails to match
-shows up as a missing task (never silently dropped), so the engine errs toward
-over-flagging.
+Tasks are paired one-to-one per asset: identical task, then shared part number,
+then similar component name (handles "hyd filters" vs "hydraulic return filter").
+Each finding records the **match basis and confidence**, shown in the report.
+Anything that fails to match shows up as a missing task, never silently dropped.
+
+Execution checks use the window from an asset's first to its latest checklist
+ticket. Running hours come from the meter readings on tickets, which also give
+the asset's usage rate (hours per month).
+
+### Why vendors do extra work
+
+For each `vendor_addition` / `tightened_interval`, the rationale agent searches
+ticket notes and field documents and returns a reason with quotes. Quotes are
+checked against the retrieved text; a reason with no verified quote is stored as
+**unconfirmed**. Each item also gets a status, justified / unjustified / unknown
+(only "unknown" without a verified quote). The POC shows the status; it does not
+include an approval flow for extra work.
 
 ## Running it
 
@@ -79,12 +106,25 @@ agent and chat, `text-embedding-3-small` for embeddings). Data is stored under
 Both folders are git-ignored so manuals and contracts stay local. Scanned PDFs
 need OCR before upload.
 
-### Synthetic sample data
+### Vendor checklists
 
-[`data/samples/`](data/samples/README.md) holds three **fictional** documents
-used only to test the pipeline. They contain one of each finding type. Load
-them with the button on the Ingest page or `python scripts/load_samples.py`.
-They are tagged SAMPLE in the app and are not real maintenance guidance.
+Enter a visit on the **Checklist entry** page, or upload a CSV on the Ingest page
+(template downloadable there; columns `date, asset_id, vendor, component, action,
+meter_hours, time_spent_hours, notes`). The checklist format is still provisional.
+
+### Synthetic sample data and the success test
+
+[`data/samples/`](data/samples/README.md) holds a **fictional** generator
+(`SAMPLE-GEN-01`): an OEM spec, a vendor contract and checklist tickets with
+**10 planted gaps across all five gap types**, plus an answer key
+(`planted_gaps.json`). It stands in for a real manual until the real ones arrive
+and is tagged SAMPLE everywhere. It is not real maintenance guidance.
+
+```bash
+python scripts/load_samples.py   # real OpenAI extraction, scored against the answer key
+```
+
+Success = every planted gap found and no false alarms. The script exits non-zero otherwise.
 
 ## Tests
 
@@ -93,13 +133,15 @@ pytest
 ```
 
 Tests run offline: the OpenAI calls are replaced with fakes and Chroma runs
-in memory. They cover the rules engine, normalization, chunking, the full
-pipeline on the sample data, and a smoke test of every Streamlit page.
+in memory. They cover the rules and execution engines, normalization, ticket
+import, the full pipeline scored against the planted gaps, and every Streamlit page.
 
 ## Known POC limits / next steps
 
 - Asset ID is entered at upload time; multi-asset manuals need one upload per asset for now.
 - No OCR for scanned manuals; no table-specific PDF parsing yet (text extraction handles most digital tables).
 - Rationale agent is a single retrieve-then-reason step; it can become a tool-calling agent later.
+- Checklist format is provisional; execution checks compare against the OEM baseline, not the contract.
+- No approval flow for vendor extra work yet (status is display-only).
 - No auth or multi-user separation.
 - pgvector backend: implement `VectorStore` in `blueprint/stores/vector.py` and set `BLUEPRINT_VECTOR_BACKEND=pgvector`.

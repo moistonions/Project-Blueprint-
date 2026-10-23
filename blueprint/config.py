@@ -23,6 +23,8 @@ class Settings:
         default_factory=lambda: os.getenv("BLUEPRINT_EMBEDDING_MODEL", "text-embedding-3-small")
     )
     data_dir: Path = field(default_factory=lambda: Path(os.getenv("BLUEPRINT_DATA_DIR", ROOT / "storage")))
+    # Overrun allowed on recurring tasks before an interval is "beyond tolerance" (provisional 10%).
+    tolerance: float = field(default_factory=lambda: float(os.getenv("BLUEPRINT_TOLERANCE", "0.10")))
     vector_backend: str = field(default_factory=lambda: os.getenv("BLUEPRINT_VECTOR_BACKEND", "chroma"))
 
     @property

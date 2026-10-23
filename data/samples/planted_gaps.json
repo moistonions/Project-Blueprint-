@@ -1,0 +1,21 @@
+{
+  "_note": "SYNTHETIC answer key for the sample generator set. Success = every gap below is found and no other gap is reported.",
+  "asset_id": "SAMPLE-GEN-01",
+  "safety_critical_components": ["emergency stop and shutdown safety devices"],
+  "gaps": [
+    {"id": "G1", "type": "missing_task", "component": "load bank", "why": "OEM 9.8 not in contract"},
+    {"id": "G2", "type": "missing_task", "component": "alternator winding insulation resistance", "why": "OEM 9.9 not in contract"},
+    {"id": "G3", "type": "longer_interval", "component": "fuel filter", "why": "525 h vs 500 h, 5% over, within 10%"},
+    {"id": "G4", "type": "beyond_tolerance", "component": "engine coolant", "why": "36 vs 24 months"},
+    {"id": "G5", "type": "beyond_tolerance", "component": "air filter element", "why": "750 h vs 500 h"},
+    {"id": "G6", "type": "beyond_tolerance", "component": "emergency stop and shutdown safety devices", "why": "27 weeks vs 6 months, safety-critical so zero tolerance"},
+    {"id": "G7", "type": "spec_mismatch", "component": "engine oil and oil filter", "why": "SAE 10W-30 vs SAE 15W-40"},
+    {"id": "G8", "type": "spec_mismatch", "component": "crankcase breather filter", "why": "P/N SG-BF-41 vs SG-BF-40"},
+    {"id": "G9", "type": "execution_gap", "component": "engine oil and oil filter", "why": "done 2025-01-15 then 2025-09-15, 243 days vs 6 months"},
+    {"id": "G10", "type": "execution_gap", "component": "drive belt tension", "why": "last done 2025-01-15, not done by 2025-10-15"}
+  ],
+  "expected_info": [
+    {"type": "tightened_interval", "component": "starting battery and charger", "why": "monthly vs 3 months; reason in ticket notes"},
+    {"type": "vendor_addition", "component": "radiator fins", "why": "not in OEM; reason in ticket notes"}
+  ]
+}
