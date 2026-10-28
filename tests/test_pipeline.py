@@ -1,8 +1,8 @@
-"""End-to-end pipeline on the synthetic generator sample, with the OpenAI calls faked.
+"""End-to-end pipeline on the synthetic generator sample, with the LLM calls faked.
 
 The fake extraction returns what a correct extraction of the sample files looks
 like, so these tests score the deterministic engine against the planted gaps.
-(`scripts/load_samples.py` runs the same scoring with real OpenAI extraction.)
+(`scripts/load_samples.py` runs the same scoring with real LLM extraction.)
 """
 
 import hashlib
@@ -84,7 +84,7 @@ class FakeLLM:
 
 @pytest.fixture
 def bp(tmp_path):
-    settings = Settings(openai_api_key="test", data_dir=tmp_path)
+    settings = Settings(anthropic_api_key="test", data_dir=tmp_path)
     return Blueprint(settings, FakeLLM(), StructuredStore(":memory:"), ChromaStore(None, FakeEmbedder(), collection=tmp_path.name))
 
 

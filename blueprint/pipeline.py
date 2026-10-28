@@ -27,15 +27,15 @@ class Blueprint:
 
     @classmethod
     def from_settings(cls, settings: Settings) -> Blueprint:
-        from blueprint.llm import OpenAIClient
+        from blueprint.llm import make_embedder, make_llm
         from blueprint.stores.vector import make_vector_store
 
-        client = OpenAIClient(settings)
+        llm = make_llm(settings)
         return cls(
             settings,
-            client,
+            llm,
             StructuredStore(settings.sqlite_path),
-            make_vector_store(settings.vector_backend, settings.chroma_path, client),
+            make_vector_store(settings.vector_backend, settings.chroma_path, make_embedder(settings, llm)),
         )
 
     # ------------------------------------------------------------------ ingest

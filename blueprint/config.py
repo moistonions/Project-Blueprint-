@@ -13,12 +13,28 @@ load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
 
 
+_DEFAULT_MODELS = {
+    "anthropic": {"chat": "claude-opus-5-5"},
+    "openai": {"chat": "gpt-5-mini"},
+}
+
+
+def _env(name: str) -> str | None:
+    return os.getenv(name) or None
+
+
 @dataclass(frozen=True)
 class Settings:
-    openai_api_key: str | None = field(default_factory=lambda: os.getenv("OPENAI_API_KEY"))
-    extraction_model: str = field(default_factory=lambda: os.getenv("BLUEPRINT_EXTRACTION_MODEL", "gpt-5-mini"))
-    agent_model: str = field(default_factory=lambda: os.getenv("BLUEPRINT_AGENT_MODEL", "gpt-5-mini"))
-    chat_model: str = field(default_factory=lambda: os.getenv("BLUEPRINT_CHAT_MODEL", "gpt-5-mini"))
+    # "anthropic" (Claude, default) or "openai". Claude has no embeddings API, so with
+    # Claude the vector index uses a small local embedding model (no key needed).
+    llm_provider: str = field(default_factory=lambda: os.getenv("BLUEPRINT_LLM_PROVIDER", "anthropic").lower())
+    anthropic_api_key: str | None = field(default_factory=lambda: _env("ANTHROPIC_API_KEY"))
+    openai_api_key: str | None = field(default_factory=lambda: _env("OPENAI_API_KEY"))
+    extraction_model: str | None = field(default_factory=lambda: _env("BLUEPRINT_EXTRACTION_MODEL"))
+    agent_model: str | None = field(default_factory=lambda: _env("BLUEPRINT_AGENT_MODEL"))
+    chat_model: str | None = field(default_factory=lambda: _env("BLUEPRINT_CHAT_MODEL"))
+    # "local" (default with Claude) or "openai" (default with OpenAI).
+    embeddings: str | None = field(default_factory=lambda: _env("BLUEPRINT_EMBEDDINGS"))
     embedding_model: str = field(
         default_factory=lambda: os.getenv("BLUEPRINT_EMBEDDING_MODEL", "text-embedding-3-small")
     )
@@ -26,6 +42,16 @@ class Settings:
     # Overrun allowed on recurring tasks before an interval is "beyond tolerance" (provisional 10%).
     tolerance: float = field(default_factory=lambda: float(os.getenv("BLUEPRINT_TOLERANCE", "0.10")))
     vector_backend: str = field(default_factory=lambda: os.getenv("BLUEPRINT_VECTOR_BACKEND", "chroma"))
+
+    def __post_init__(self):
+        if self.llm_provider not in _DEFAULT_MODELS:
+            raise ValueError(f"BLUEPRINT_LLM_PROVIDER must be one of {sorted(_DEFAULT_MODELS)}")
+        default = _DEFAULT_MODELS[self.llm_provider]["chat"]
+        for name in ("extraction_model", "agent_model", "chat_model"):
+            if not getattr(self, name):
+                object.__setattr__(self, name, default)
+        if not self.embeddings:
+            object.__setattr__(self, "embeddings", "openai" if self.llm_provider == "openai" else "local")
 
     @property
     def sqlite_path(self) -> Path:

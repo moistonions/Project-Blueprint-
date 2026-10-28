@@ -1,7 +1,7 @@
 """Load the synthetic sample generator set, run the analysis and score it
 against the planted gaps in data/samples/planted_gaps.json.
 
-This uses the real OpenAI extraction, so it is the end-to-end success test:
+This uses real LLM extraction (Claude by default), so it is the end-to-end success test:
 every planted gap found, no false alarms. The sample files are fictional.
 """
 

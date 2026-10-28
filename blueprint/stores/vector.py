@@ -88,6 +88,7 @@ class ChromaStore:
 
 def make_vector_store(backend: str, path: Path, embedder: Embedder) -> VectorStore:
     if backend == "chroma":
-        return ChromaStore(path, embedder)
+        # Vectors from different embedding models aren't comparable, so each gets its own collection.
+        return ChromaStore(path, embedder, collection=f"blueprint-{embedder.name}")
     # if backend == "pgvector": return PgVectorStore(dsn, embedder)
     raise ValueError(f"Unknown vector backend '{backend}'")

@@ -29,13 +29,14 @@ vendor checklists (CSV or form) ──► tickets + meter hours ──┘   (det
 | Module | Role |
 | --- | --- |
 | `blueprint/ingest.py` | PDF/TXT/MD/CSV/EML to page text and overlapping chunks |
-| `blueprint/extract.py` | OpenAI structured outputs: component, action, part IDs, fluid spec, intervals, source quote, page, needs-review flag |
+| `blueprint/extract.py` | LLM structured outputs (Claude by default): component, action, part IDs, fluid spec, intervals, source quote, page, needs-review flag |
 | `blueprint/normalize.py` | Unit normalization (months to days, miles to km...), canonical task keys (`change` = `replace`), fuzzy component matching |
 | `blueprint/rules.py` | **Deterministic** approved-OEM-baseline vs vendor schedule comparison. No LLM. |
 | `blueprint/execution.py` | **Deterministic** late/skipped check from checklist tickets and hour-meter readings |
 | `blueprint/tickets.py` | Vendor checklist CSV import (format provisional) |
 | `blueprint/rationale.py` | Retrieval + LLM agent explaining vendor extras; keeps only quotes found verbatim in the evidence |
 | `blueprint/rag.py` | Chat answers with numbered citations |
+| `blueprint/llm.py` | Claude (default) and OpenAI clients, local or OpenAI embeddings |
 | `blueprint/stores/structured.py` | SQLite: documents (with baseline status), tasks, tickets, findings, rationales |
 | `blueprint/stores/vector.py` | `VectorStore` interface + `ChromaStore`. Add a `PgVectorStore` here to switch to pgvector. |
 | `app.py` | Streamlit UI: Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask |
@@ -88,13 +89,21 @@ include an approval flow for extra work.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # add OPENAI_API_KEY
+cp .env.example .env          # add ANTHROPIC_API_KEY
 streamlit run app.py
 ```
 
-Models are configurable in `.env` (defaults: `gpt-5-mini` for extraction, the
-agent and chat, `text-embedding-3-small` for embeddings). Data is stored under
-`storage/` (git-ignored).
+By default the app uses **Claude** (`claude-opus-5-5`) for extraction, the
+rationale agent and chat, so you only need an `ANTHROPIC_API_KEY`. Claude has
+no embeddings API, so the search index uses a small local embedding model
+(all-MiniLM-L6-v2, about 80 MB, downloaded once on first run; no key needed).
+Claude requests opt into server-side refusal fallbacks (`fallbacks: "default"`).
+
+To use OpenAI instead, set `BLUEPRINT_LLM_PROVIDER=openai` and `OPENAI_API_KEY`
+(OpenAI embeddings are then the default). Models and embeddings can be overridden
+in `.env`; see `.env.example`. Switching embeddings starts a fresh search
+index, because vectors from different models can't be mixed. Data is stored
+under `storage/` (git-ignored).
 
 ### Adding real documents
 
@@ -121,7 +130,7 @@ meter_hours, time_spent_hours, notes`). The checklist format is still provisiona
 and is tagged SAMPLE everywhere. It is not real maintenance guidance.
 
 ```bash
-python scripts/load_samples.py   # real OpenAI extraction, scored against the answer key
+python scripts/load_samples.py   # real Claude extraction, scored against the answer key
 ```
 
 Success = every planted gap found and no false alarms. The script exits non-zero otherwise.
@@ -132,7 +141,7 @@ Success = every planted gap found and no false alarms. The script exits non-zero
 pytest
 ```
 
-Tests run offline: the OpenAI calls are replaced with fakes and Chroma runs
+Tests run offline: the LLM calls are replaced with fakes and Chroma runs
 in memory. They cover the rules and execution engines, normalization, ticket
 import, the full pipeline scored against the planted gaps, and every Streamlit page.
 

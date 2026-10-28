@@ -37,7 +37,7 @@ class Interval(BaseModel):
     unit: IntervalUnit
 
 
-# Defaults below use default_factory so no "default" keys reach the OpenAI strict JSON schema.
+# Defaults below use default_factory so no "default" keys reach the strict JSON schema sent to the LLM.
 class ExtractedTask(BaseModel):
     """One maintenance requirement as stated by a single source document (LLM output schema)."""
 
@@ -65,7 +65,7 @@ class MaintenanceTask(ExtractedTask):
 
 
 class ExtractionResult(BaseModel):
-    """Schema handed to the OpenAI structured-output call."""
+    """Schema handed to the LLM structured-output call."""
 
     tasks: list[ExtractedTask]
 
