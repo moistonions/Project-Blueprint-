@@ -1,0 +1,22 @@
+date,asset_id,vendor,component,action,meter_hours,time_spent_hours,notes
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),engine oil and oil filter,replace,1000,1.5,SYNTHETIC SAMPLE.
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),drive belt tension,inspect,1000,0.3,SYNTHETIC SAMPLE.
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),exhaust system,inspect,1000,0.5,SYNTHETIC SAMPLE.
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),emergency stop and shutdown safety devices,test,1000,0.5,SYNTHETIC SAMPLE.
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1000,0.3,SYNTHETIC SAMPLE. Site manager asked for monthly battery checks after two failed starts in 2024 traced to a faulty charger.
+2025-01-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),radiator fins,clean,1000,1.0,SYNTHETIC SAMPLE. Quarry site with heavy dust; radiator fins were half blocked and coolant temperature alarms tripped last summer.
+2025-02-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1030,0.3,SYNTHETIC SAMPLE.
+2025-03-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1060,0.3,SYNTHETIC SAMPLE.
+2025-04-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1090,0.3,SYNTHETIC SAMPLE.
+2025-04-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),radiator fins,clean,1090,1.0,SYNTHETIC SAMPLE. Fins clogged with quarry dust again after three months.
+2025-05-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1120,0.3,SYNTHETIC SAMPLE.
+2025-06-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1150,0.3,SYNTHETIC SAMPLE.
+2025-07-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1180,0.3,SYNTHETIC SAMPLE.
+2025-07-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),exhaust system,inspect,1180,0.5,SYNTHETIC SAMPLE.
+2025-07-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),emergency stop and shutdown safety devices,test,1180,0.5,SYNTHETIC SAMPLE.
+2025-07-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),radiator fins,clean,1180,1.0,SYNTHETIC SAMPLE.
+2025-08-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1210,0.3,SYNTHETIC SAMPLE.
+2025-09-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1240,0.3,SYNTHETIC SAMPLE.
+2025-09-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),engine oil and oil filter,replace,1240,1.5,SYNTHETIC SAMPLE. Oil change overdue; parts were back-ordered.
+2025-10-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),starting battery and charger,inspect,1270,0.3,SYNTHETIC SAMPLE.
+2025-10-15,SAMPLE-GEN-01,Example Power Services Ltd (fictional),radiator fins,clean,1270,1.0,SYNTHETIC SAMPLE.

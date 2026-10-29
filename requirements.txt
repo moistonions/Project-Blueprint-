@@ -1,0 +1,9 @@
+streamlit>=1.40
+anthropic>=2.3
+openai>=1.80  # optional: only for BLUEPRINT_LLM_PROVIDER=openai or BLUEPRINT_EMBEDDINGS=openai
+chromadb>=1.0
+pypdf>=5.0
+pydantic>=2.7
+python-dotenv>=1.0
+pandas>=2.2
+pytest>=8.0

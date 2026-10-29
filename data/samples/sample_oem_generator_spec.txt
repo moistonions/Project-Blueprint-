@@ -1,0 +1,18 @@
+SYNTHETIC SAMPLE - NOT A REAL OEM MANUAL. FOR PIPELINE TESTING ONLY.
+All model names, part numbers and intervals below are invented.
+
+Fictional Model SG-500 Diesel Generator Set (asset SAMPLE-GEN-01)
+Section 9: Preventive Maintenance Schedule
+Perform each task at the stated interval, whichever comes first.
+
+9.1 Replace engine oil and oil filter, filter P/N SG-OF-10, oil SAE 15W-40: every 250 operating hours or 6 months.
+9.2 Replace fuel filter, P/N SG-FF-20: every 500 operating hours or 12 months.
+9.3 Replace air filter element, P/N SG-AF-30: every 500 operating hours or 12 months.
+9.4 Replace engine coolant, spec ELC 50/50: every 3000 operating hours or 24 months.
+9.5 Inspect drive belt tension: every 250 operating hours or 6 months.
+9.6 Inspect starting battery and charger: every 3 months.
+9.7 Test emergency stop and shutdown safety devices: every 6 months.
+9.8 Perform load bank test: every 12 months.
+9.9 Test alternator winding insulation resistance: every 12 months.
+9.10 Replace crankcase breather filter, P/N SG-BF-40: every 1000 operating hours.
+9.11 Inspect exhaust system for leaks: every 250 operating hours or 6 months.
