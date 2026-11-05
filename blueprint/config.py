@@ -28,7 +28,14 @@ class Settings:
     # "anthropic" (Claude, default) or "openai". Claude has no embeddings API, so with
     # Claude the vector index uses a small local embedding model (no key needed).
     llm_provider: str = field(default_factory=lambda: os.getenv("BLUEPRINT_LLM_PROVIDER", "anthropic").lower())
-    anthropic_api_key: str | None = field(default_factory=lambda: _env("ANTHROPIC_API_KEY"))
+    # BLUEPRINT_ANTHROPIC_API_KEY wins: hosted Claude Code sessions reserve ANTHROPIC_API_KEY
+    # and ANTHROPIC_BASE_URL for themselves, so the app's own key needs its own name there.
+    anthropic_api_key: str | None = field(
+        default_factory=lambda: _env("BLUEPRINT_ANTHROPIC_API_KEY") or _env("ANTHROPIC_API_KEY")
+    )
+    anthropic_base_url: str = field(
+        default_factory=lambda: os.getenv("BLUEPRINT_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+    )
     openai_api_key: str | None = field(default_factory=lambda: _env("OPENAI_API_KEY"))
     extraction_model: str | None = field(default_factory=lambda: _env("BLUEPRINT_EXTRACTION_MODEL"))
     agent_model: str | None = field(default_factory=lambda: _env("BLUEPRINT_AGENT_MODEL"))

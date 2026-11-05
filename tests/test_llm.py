@@ -98,3 +98,11 @@ def test_local_embedder_is_keyless():
     except Exception as e:  # model download blocked (offline CI)
         pytest.skip(f"local embedding model unavailable: {e}")
     assert len(vecs) == 2 and len(vecs[0]) == 384
+
+
+def test_blueprint_key_name_takes_precedence(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "plain")
+    monkeypatch.setenv("BLUEPRINT_ANTHROPIC_API_KEY", "blueprint")
+    assert Settings().anthropic_api_key == "blueprint"
+    monkeypatch.delenv("BLUEPRINT_ANTHROPIC_API_KEY")
+    assert Settings().anthropic_api_key == "plain"
