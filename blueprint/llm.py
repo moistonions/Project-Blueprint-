@@ -31,10 +31,10 @@ class AnthropicClient:
 
     def __init__(self, settings: Settings):
         if not settings.anthropic_api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.")
+            raise RuntimeError("ANTHROPIC_API_KEY (or BLUEPRINT_ANTHROPIC_API_KEY) is not set. Copy .env.example to .env and add your key.")
         import anthropic
 
-        self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key, base_url=settings.anthropic_base_url)
 
     @staticmethod
     def _check(resp) -> None:
