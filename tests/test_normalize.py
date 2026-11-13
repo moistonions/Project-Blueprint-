@@ -41,3 +41,10 @@ def test_component_similarity_rules():
     assert component_similarity("coolant", "engine coolant") == 1.0
     assert component_similarity("hyd filters", "hydraulic return filter") == 1.0
     assert component_similarity("filter", "oil filter") < 0.8
+
+
+def test_read_out_and_diagnose_count_as_inspect():
+    from blueprint.normalize import canonical_action
+
+    assert canonical_action("read out") == canonical_action("inspect")
+    assert canonical_action("diagnose") == "inspect"
