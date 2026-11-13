@@ -1,0 +1,277 @@
+[
+  {
+    "component": "exhaust line pipes and hoses",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 32,
+        "unit": "days"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "PMGi inverter heat sinks",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 6,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "PMGi inverter heat sinks",
+    "action": "clean",
+    "intervals": [
+      {
+        "value": 6,
+        "unit": "months"
+      }
+    ],
+    "spec": "compressed air"
+  },
+  {
+    "component": "starter battery",
+    "action": "charge",
+    "intervals": [
+      {
+        "value": 1,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "engine management fault memory",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "engine control unit software",
+    "action": "update",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "engine and radiator fins",
+    "action": "clean",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "coolant anti-freeze concentration",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "engine oil and oil filter",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": "API CH-4"
+  },
+  {
+    "component": "poly v belt",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "crankcase ventilation oil separator",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "screw connections",
+    "action": "inspect",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "fuel prefilter",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "main fuel filter",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 540,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "charge air cooler",
+    "action": "drain",
+    "intervals": [
+      {
+        "value": 500,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "air filter primary cartridge",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 750,
+        "unit": "hours"
+      },
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "air filter secondary element",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 2,
+        "unit": "years"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "fuel water separator",
+    "action": "drain",
+    "intervals": [
+      {
+        "value": 12,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "engine coolant",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 4,
+        "unit": "years"
+      }
+    ],
+    "spec": "generic IAT green coolant"
+  },
+  {
+    "component": "poly v belt",
+    "action": "replace",
+    "intervals": [
+      {
+        "value": 3000,
+        "unit": "hours"
+      }
+    ],
+    "spec": null
+  },
+  {
+    "component": "exhaust mixing elbow",
+    "action": "descale",
+    "intervals": [
+      {
+        "value": 6,
+        "unit": "months"
+      }
+    ],
+    "spec": null
+  }
+]

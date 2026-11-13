@@ -1,0 +1,428 @@
+{
+  "_note": "PROPOSED baseline for sign-off, not yet approved by a person. Tasks, intervals, pages and quotes come from the real Panda_60i_PMS_System_eng.R05.1 manual and the Hatz_3H50_4H50_manual_PLACEHOLDER manual (placeholder for the actual engine documents). Daily/weekly operator checks, storage/downtime measures, one-off initial services and condition-only tasks are left out of the vendor baseline. In quotes, ' ... ' joins a table's interval header to the row it applies to.",
+  "asset_id": "PANDA-60I",
+  "tasks": [
+    {
+      "key": "P1",
+      "source": "Panda_60i_PMS_System_eng.R05.1",
+      "page": 81,
+      "component": "exhaust line pipes and hoses",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 1,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": true,
+      "source_quote": "the pipes must be checked for corrosion regularly (at the latest once a month) and replaced if necessary",
+      "placeholder": false
+    },
+    {
+      "key": "P2",
+      "source": "Panda_60i_PMS_System_eng.R05.1",
+      "page": 113,
+      "component": "PMGi inverter heat sinks",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 6,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 6 months it is necessary to visual inspect the heat sinks and clean it with compressed air.",
+      "placeholder": false
+    },
+    {
+      "key": "P3",
+      "source": "Panda_60i_PMS_System_eng.R05.1",
+      "page": 113,
+      "component": "PMGi inverter heat sinks",
+      "action": "clean",
+      "intervals": [
+        {
+          "value": 6,
+          "unit": "months"
+        }
+      ],
+      "spec": "compressed air",
+      "safety_critical": false,
+      "source_quote": "Every 6 months it is necessary to visual inspect the heat sinks and clean it with compressed air.",
+      "placeholder": false
+    },
+    {
+      "key": "P4",
+      "source": "Panda_60i_PMS_System_eng.R05.1",
+      "page": 47,
+      "component": "starter battery",
+      "action": "charge",
+      "intervals": [
+        {
+          "value": 2,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "It is recommended that the starter battery be regularly charged by a suitable battery-charging device (i.e., at least every 2 Months).",
+      "placeholder": false
+    },
+    {
+      "key": "H1",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "engine management fault memory",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Diagnosis of engine management",
+      "placeholder": true
+    },
+    {
+      "key": "H2",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "engine control unit software",
+      "action": "update",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Update of the engine control unit",
+      "placeholder": true
+    },
+    {
+      "key": "H3",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "engine and radiator fins",
+      "action": "clean",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Clean the engine",
+      "placeholder": true
+    },
+    {
+      "key": "H4",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "coolant anti-freeze concentration",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Check the anti-freeze concentration of the coolant",
+      "placeholder": true
+    },
+    {
+      "key": "H5",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "engine oil and oil filter",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": "ACEA E6",
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Change the engine oil and oil filter",
+      "placeholder": true
+    },
+    {
+      "key": "H6",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "poly v belt",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Check the poly v belt",
+      "placeholder": true
+    },
+    {
+      "key": "H7",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "crankcase ventilation oil separator",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Change the crankcase ventilation oil separator",
+      "placeholder": true
+    },
+    {
+      "key": "H8",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "screw connections",
+      "action": "inspect",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Check the screw connections",
+      "placeholder": true
+    },
+    {
+      "key": "H9",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "fuel prefilter",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Change the fuel prefilter",
+      "placeholder": true
+    },
+    {
+      "key": "H10",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "main fuel filter",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Change the main fuel filter",
+      "placeholder": true
+    },
+    {
+      "key": "H11",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "charge air cooler",
+      "action": "drain",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Drain the charge air cooler",
+      "placeholder": true
+    },
+    {
+      "key": "H12",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 84,
+      "component": "air filter primary cartridge",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 500,
+          "unit": "hours"
+        },
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 500 operating hours or every 12 months ... Change the air filter cartridge (primary filter)",
+      "placeholder": true
+    },
+    {
+      "key": "H13",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "air filter secondary element",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 2,
+          "unit": "years"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "The secondary filter must be replaced after every fifth replacement of the primary filter, though no later than every two years.",
+      "placeholder": true
+    },
+    {
+      "key": "H14",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "fuel water separator",
+      "action": "drain",
+      "intervals": [
+        {
+          "value": 12,
+          "unit": "months"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "When indicated, at least every 12 months Drain the water separator",
+      "placeholder": true
+    },
+    {
+      "key": "H15",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "engine coolant",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 4,
+          "unit": "years"
+        }
+      ],
+      "spec": "Mitan C12+",
+      "safety_critical": false,
+      "source_quote": "Every 4 years Change the coolant",
+      "placeholder": true
+    },
+    {
+      "key": "H16",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "poly v belt",
+      "action": "replace",
+      "intervals": [
+        {
+          "value": 3000,
+          "unit": "hours"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "If necessary, but every 3,000 operating hours at the latest ... Change the poly v belt",
+      "placeholder": true
+    },
+    {
+      "key": "H17",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "exhaust gas recirculation main radiator",
+      "action": "clean",
+      "intervals": [
+        {
+          "value": 4000,
+          "unit": "hours"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 4,000 operating hours ... Clean the main radiator of the exhaust gas recirculation (EGR)",
+      "placeholder": true
+    },
+    {
+      "key": "H18",
+      "source": "Hatz_3H50_4H50_manual_PLACEHOLDER",
+      "page": 85,
+      "component": "diesel particulate filter",
+      "action": "clean",
+      "intervals": [
+        {
+          "value": 4000,
+          "unit": "hours"
+        }
+      ],
+      "spec": null,
+      "safety_critical": false,
+      "source_quote": "Every 4,000 operating hours ... Clean the diesel particulate filter (DPF)",
+      "placeholder": true
+    }
+  ]
+}

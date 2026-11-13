@@ -1,0 +1,82 @@
+{
+  "_note": "SIMULATED answer key. Success = every gap below is found and no other gap is reported.",
+  "asset_id": "PANDA-60I",
+  "vendor": "Example Marine Services (fictional)",
+  "safety_critical_components": [
+    "exhaust line pipes and hoses"
+  ],
+  "gaps": [
+    {
+      "id": "G1",
+      "type": "missing_task",
+      "component": "diesel particulate filter",
+      "why": "OEM 4000 h DPF cleaning is not in the contract"
+    },
+    {
+      "id": "G2",
+      "type": "missing_task",
+      "component": "exhaust gas recirculation main radiator",
+      "why": "OEM 4000 h EGR radiator cleaning is not in the contract"
+    },
+    {
+      "id": "G3",
+      "type": "longer_interval",
+      "component": "main fuel filter",
+      "why": "540 h vs 500 h, 8% over, within the 10% tolerance"
+    },
+    {
+      "id": "G4",
+      "type": "beyond_tolerance",
+      "component": "air filter primary cartridge",
+      "why": "750 h vs 500 h"
+    },
+    {
+      "id": "G5",
+      "type": "beyond_tolerance",
+      "component": "exhaust line pipes and hoses",
+      "why": "32 days vs 1 month; safety-critical, so zero tolerance"
+    },
+    {
+      "id": "G6",
+      "type": "missing_interval_basis",
+      "component": "fuel prefilter",
+      "why": "contract has 500 h only, OEM also says 12 months"
+    },
+    {
+      "id": "G7",
+      "type": "spec_mismatch",
+      "component": "engine oil and oil filter",
+      "why": "API CH-4 is not on the Hatz oil list (ACEA E6 recommended)"
+    },
+    {
+      "id": "G8",
+      "type": "spec_mismatch",
+      "component": "engine coolant",
+      "why": "generic IAT coolant vs Mitan C12+ or a Hatz-approved alternative"
+    },
+    {
+      "id": "G9",
+      "type": "execution_gap",
+      "component": "engine oil and oil filter",
+      "why": "changed 2025-01-15 then 2025-06-15, 750 running hours vs 500"
+    },
+    {
+      "id": "G10",
+      "type": "execution_gap",
+      "component": "PMGi inverter heat sinks",
+      "why": "cleaned 2025-01-15, not again by 2025-12-15 (6 months)"
+    }
+  ],
+  "expected_info": [
+    {
+      "type": "tightened_interval",
+      "component": "starter battery",
+      "why": "monthly vs 2 months; reason in ticket notes"
+    },
+    {
+      "type": "vendor_addition",
+      "component": "exhaust mixing elbow",
+      "why": "not in OEM; reason in ticket notes"
+    }
+  ]
+}
