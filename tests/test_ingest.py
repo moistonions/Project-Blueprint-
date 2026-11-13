@@ -34,3 +34,11 @@ def test_form_feeds_split_pages():
 
 def test_text_without_page_markers_stays_one_page():
     assert len(read_pages("m.txt", b"see page 4 for details\n\nnothing else")) == 1
+
+
+def test_running_header_marks_pages():
+    text = "".join(
+        (f"HATZ Manual {n}\n" if n % 2 else f"{n} Manual HATZ\n") + f"text {n}\n" for n in range(3, 9)
+    )
+    pages = read_pages("hatz.txt", text.encode())
+    assert [p.number for p in pages] == [3, 4, 5, 6, 7, 8]
