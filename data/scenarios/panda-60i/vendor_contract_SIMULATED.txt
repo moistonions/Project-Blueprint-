@@ -1,0 +1,27 @@
+SIMULATED VENDOR CONTRACT - NOT A REAL DOCUMENT. FOR POC TESTING ONLY.
+Gaps against the PANDA-60I baseline are planted on purpose; see planted_gaps.json.
+
+Example Marine Services (fictional) - Schedule B: Planned Maintenance, asset PANDA-60I (Fischer Panda 60i generator set)
+Intervals are whichever comes first.
+
+B.1 Inspect exhaust line pipes and hoses for corrosion every 32 days.
+B.2 Inspect PMGi inverter heat sinks every 6 months.
+B.3 Clean PMGi inverter heat sinks with compressed air every 6 months.
+B.4 Charge the starter battery every month.
+B.5 Read out the engine management fault memory every 500 hours or 12 months.
+B.6 Update the engine control unit software every 500 hours or 12 months.
+B.7 Clean the engine and radiator fins every 500 hours or 12 months.
+B.8 Check the coolant anti-freeze concentration every 500 hours or 12 months.
+B.9 Change the engine oil and oil filter with API CH-4 oil every 500 hours or 12 months.
+B.10 Check the poly v belt every 500 hours or 12 months.
+B.11 Change the crankcase ventilation oil separator every 500 hours or 12 months.
+B.12 Check the screw connections every 500 hours or 12 months.
+B.13 Change the fuel prefilter every 500 hours.
+B.14 Change the main fuel filter every 540 hours or 12 months.
+B.15 Drain the charge air cooler every 500 hours or 12 months.
+B.16 Change the air filter primary cartridge every 750 hours or 12 months.
+B.17 Change the air filter secondary element every 2 years.
+B.18 Drain the fuel water separator every 12 months.
+B.19 Replace the engine coolant every 4 years with generic IAT green coolant.
+B.20 Replace the poly v belt every 3000 hours.
+B.21 Descale the exhaust mixing elbow every 6 months.

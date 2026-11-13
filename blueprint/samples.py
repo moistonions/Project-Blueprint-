@@ -51,9 +51,9 @@ def load_samples(bp: Blueprint, *, sign_off: bool = True) -> list[Finding]:
     return bp.analyze(SAMPLE_ASSET)
 
 
-def score(findings: list[Finding]) -> dict:
+def score(findings: list[Finding], key: dict | None = None) -> dict:
     """Compare reported gaps with the planted ones. Returns found / missed / false alarms."""
-    planted = answer_key()["gaps"]
+    planted = (key or answer_key())["gaps"]
     gaps = [f for f in findings if f.type in GAP_TYPES]
     used: set[int] = set()
     found, missed = [], []

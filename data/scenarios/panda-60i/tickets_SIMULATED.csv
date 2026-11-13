@@ -1,0 +1,78 @@
+date,asset_id,vendor,component,action,meter_hours,time_spent_hours,notes
+2025-01-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3000,0.3,SIMULATED. Owner asked for monthly charging after the generator failed to start twice in 2024 when the vessel sat alongside for several weeks with the battery discharged.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),engine management fault memory,inspect,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),engine control unit software,update,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),engine and radiator fins,clean,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),coolant anti-freeze concentration,inspect,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),poly v belt,inspect,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),crankcase ventilation oil separator,replace,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),screw connections,inspect,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),fuel prefilter,replace,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),main fuel filter,replace,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),charge air cooler,drain,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),air filter primary cartridge,replace,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),engine oil and oil filter,replace,3000,1.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),PMGi inverter heat sinks,inspect,3000,0.3,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),exhaust mixing elbow,descale,3000,2.0,SIMULATED. Mixing elbow half blocked with salt scale at the 2024 overhaul; high exhaust back-pressure alarms. Owner agreed six-monthly descaling.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),PMGi inverter heat sinks,clean,3000,0.5,SIMULATED.
+2025-01-15,PANDA-60I,Example Marine Services (fictional),fuel water separator,drain,3000,0.2,SIMULATED.
+2025-02-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3150,0.5,SIMULATED.
+2025-02-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3150,0.3,SIMULATED.
+2025-03-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3300,0.5,SIMULATED.
+2025-03-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3300,0.3,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3450,0.3,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),engine management fault memory,inspect,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),engine control unit software,update,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),engine and radiator fins,clean,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),coolant anti-freeze concentration,inspect,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),poly v belt,inspect,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),crankcase ventilation oil separator,replace,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),screw connections,inspect,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),fuel prefilter,replace,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),main fuel filter,replace,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),charge air cooler,drain,3450,0.5,SIMULATED.
+2025-04-15,PANDA-60I,Example Marine Services (fictional),air filter primary cartridge,replace,3450,0.5,SIMULATED.
+2025-05-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3600,0.5,SIMULATED.
+2025-05-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3600,0.3,SIMULATED.
+2025-06-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3750,0.5,SIMULATED.
+2025-06-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3750,0.3,SIMULATED.
+2025-06-15,PANDA-60I,Example Marine Services (fictional),engine oil and oil filter,replace,3750,1.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,3900,0.3,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),engine management fault memory,inspect,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),engine control unit software,update,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),engine and radiator fins,clean,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),coolant anti-freeze concentration,inspect,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),poly v belt,inspect,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),crankcase ventilation oil separator,replace,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),screw connections,inspect,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),fuel prefilter,replace,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),main fuel filter,replace,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),charge air cooler,drain,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),air filter primary cartridge,replace,3900,0.5,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),PMGi inverter heat sinks,inspect,3900,0.3,SIMULATED.
+2025-07-15,PANDA-60I,Example Marine Services (fictional),exhaust mixing elbow,descale,3900,2.0,SIMULATED.
+2025-08-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,4050,0.5,SIMULATED.
+2025-08-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,4050,0.3,SIMULATED.
+2025-09-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,4200,0.5,SIMULATED.
+2025-09-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,4200,0.3,SIMULATED.
+2025-09-15,PANDA-60I,Example Marine Services (fictional),engine oil and oil filter,replace,4200,1.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,4350,0.3,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),engine management fault memory,inspect,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),engine control unit software,update,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),engine and radiator fins,clean,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),coolant anti-freeze concentration,inspect,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),poly v belt,inspect,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),crankcase ventilation oil separator,replace,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),screw connections,inspect,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),fuel prefilter,replace,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),main fuel filter,replace,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),charge air cooler,drain,4350,0.5,SIMULATED.
+2025-10-15,PANDA-60I,Example Marine Services (fictional),air filter primary cartridge,replace,4350,0.5,SIMULATED.
+2025-11-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,4500,0.5,SIMULATED.
+2025-11-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,4500,0.3,SIMULATED.
+2025-12-15,PANDA-60I,Example Marine Services (fictional),exhaust line pipes and hoses,inspect,4650,0.5,SIMULATED.
+2025-12-15,PANDA-60I,Example Marine Services (fictional),starter battery,charge,4650,0.3,SIMULATED.
