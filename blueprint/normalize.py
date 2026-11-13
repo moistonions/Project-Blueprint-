@@ -55,6 +55,8 @@ _ACTION_SYNONYMS: dict[str, str] = {
     "examine": "inspect",
     "verify": "inspect",
     "test": "inspect",
+    "read": "inspect",  # "read out the fault memory"
+    "diagnose": "inspect",
     "grease": "lubricate",
     "lube": "lubricate",
     "oil": "lubricate",
