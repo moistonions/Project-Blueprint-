@@ -19,7 +19,8 @@ Return every distinct maintenance task as a structured record:
 - spec: the fluid or material specification if stated ("SAE 15W-40", "ISO VG 46"), else null.
 - intervals: every trigger. "Every 500 hours or 3 months, whichever comes first" is two intervals.
   Use units hours (operating hours), days, weeks, months, years, km, miles or cycles.
-- source_quote: the shortest verbatim passage that states the requirement.
+- source_quote: the shortest verbatim passage that states the requirement. For a table row, include the
+  column or section header that gives the interval ("Every 500 operating hours ... Change the fuel filter").
 - page: the page number from the [page N] marker the passage sits under.
 - needs_review: true when you are not sure of the task or interval, for example a garbled or
   partly unreadable table, "as required" / "as needed" instead of an interval, or conflicting
@@ -76,11 +77,28 @@ def interval_in_quote(value: float, quote: str) -> bool:
     return any(w in q for w in _NUMBER_WORDS.get(int(value), ()))
 
 
-def _drop_unstated_intervals(task: MaintenanceTask) -> None:
-    """Remove intervals whose number is not in the source quote, and flag the task for review."""
+def _drop_unstated_intervals(task: MaintenanceTask, page_text: str = "") -> None:
+    """Remove intervals the source doesn't state, and flag the task for review.
+
+    An interval counts as stated if its number is in the quote. In a table the
+    interval often sits in a column or section header rather than the row the
+    model quoted, so a number other than 1 written on the same page also counts,
+    with a note. A bare 1 ("daily", "once") must be in the quote itself, because
+    those words are everywhere.
+    """
     if not task.source_quote:
         return
-    kept = [iv for iv in task.intervals if interval_in_quote(iv.value, task.source_quote)]
+    kept, from_page = [], []
+    for iv in task.intervals:
+        if interval_in_quote(iv.value, task.source_quote):
+            kept.append(iv)
+        elif iv.value != 1 and page_text and interval_in_quote(iv.value, page_text):
+            kept.append(iv)
+            from_page.append(iv)
+    if from_page:
+        found = ", ".join(f"{iv.value:g} {iv.unit.value}" for iv in from_page)
+        note = f"Interval {found} is on the same page (likely a table header), not in the quote."
+        task.review_note = f"{task.review_note} {note}".strip()
     if len(kept) < len(task.intervals):
         dropped = ", ".join(f"{iv.value:g} {iv.unit.value}" for iv in task.intervals if iv not in kept)
         task.intervals = kept
@@ -100,17 +118,25 @@ def extract_tasks(
 ) -> list[MaintenanceTask]:
     system = _SYSTEM.format(kind_desc=_KIND_DESC[kind], asset_id=asset_id)
     seen: dict[str, MaintenanceTask] = {}
+    page_text: dict[int, str] = {}
+    for p in pages:
+        page_text[p.number] = page_text.get(p.number, "") + p.text
     for window in _windows(pages, max_chars):
         result = llm.parse(model=model, system=system, user=window, schema=ExtractionResult)
         for extracted in result.tasks:
             task = MaintenanceTask(**extracted.model_dump(exclude={"asset_id"}), asset_id=asset_id)
-            _drop_unstated_intervals(task)
+            _drop_unstated_intervals(task, page_text.get(task.page or -1, ""))
             # The same task often appears in a summary table and in the body text.
             # Keep the first occurrence but merge any extra intervals/part numbers.
             key = task_key(task)
             if key in seen:
                 prev = seen[key]
-                prev.intervals += [iv for iv in task.intervals if iv not in prev.intervals]
+                new = [iv for iv in task.intervals if iv not in prev.intervals]
+                if new and task.source_quote and task.source_quote not in prev.source_quote:
+                    # Keep the evidence for merged intervals next to them.
+                    page = f" (p.{task.page})" if task.page else ""
+                    prev.source_quote = f"{prev.source_quote} … {task.source_quote}{page}".strip(" …")
+                prev.intervals += new
                 prev.part_ids += [p for p in task.part_ids if p not in prev.part_ids]
                 prev.needs_review |= task.needs_review
             else:
