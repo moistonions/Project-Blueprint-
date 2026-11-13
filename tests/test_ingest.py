@@ -19,3 +19,18 @@ def test_unsupported_type_rejected():
 
     with pytest.raises(ValueError):
         read_pages("x.docx", b"")
+
+
+def test_text_export_split_on_page_headers():
+    text = "Cover\n" + "".join(f"Seite/Page {n} - Chapter\nbody {n}\n\n" for n in range(2, 7))
+    pages = read_pages("manual.txt", text.encode())
+    assert [p.number for p in pages] == [1, 2, 3, 4, 5, 6]
+    assert "body 4" in pages[3].text
+
+
+def test_form_feeds_split_pages():
+    assert [p.number for p in read_pages("m.txt", b"a\fb\fc")] == [1, 2, 3]
+
+
+def test_text_without_page_markers_stays_one_page():
+    assert len(read_pages("m.txt", b"see page 4 for details\n\nnothing else")) == 1

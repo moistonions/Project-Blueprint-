@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from blueprint.ingest import Page
 from blueprint.llm import LLM
 from blueprint.models import ExtractionResult, MaintenanceTask, SourceKind
@@ -25,6 +27,8 @@ Return every distinct maintenance task as a structured record:
 
 Rules:
 - Only extract what the text states. Never infer tasks or intervals from general knowledge.
+- Vague timing ("regularly", "periodically", "from time to time", "as necessary") is not an interval:
+  leave intervals empty and set needs_review.
 - Skip safety warnings, troubleshooting tables and one-off repair procedures.
 - Use asset_id "{asset_id}" for every task."""
 
@@ -38,14 +42,51 @@ _KIND_DESC = {
 def _windows(pages: list[Page], max_chars: int) -> list[str]:
     windows, buf = [], ""
     for p in pages:
-        block = f"[page {p.number}]\n{p.text}\n"
-        if buf and len(buf) + len(block) > max_chars:
-            windows.append(buf)
-            buf = ""
-        buf += block
+        # A page longer than a window is split, with each piece keeping its page marker.
+        pieces = [p.text[i : i + max_chars] for i in range(0, len(p.text), max_chars)] or [""]
+        for piece in pieces:
+            block = f"[page {p.number}]\n{piece}\n"
+            if buf and len(buf) + len(block) > max_chars:
+                windows.append(buf)
+                buf = ""
+            buf += block
     if buf.strip():
         windows.append(buf)
     return windows
+
+
+_NUMBER_WORDS = {
+    1: ("one ", "once", "annual", "daily", "weekly", "monthly", "yearly"),
+    2: ("two", "twice", "bi-", "biannual", "fortnight"), 3: ("three",), 4: ("four",), 5: ("five",),
+    6: ("six", "semi-annual", "half-year", "half year"), 7: ("seven",), 8: ("eight",), 9: ("nine",),
+    10: ("ten",), 12: ("twelve",), 24: ("twenty-four", "twenty four"),
+}
+
+
+def interval_in_quote(value: float, quote: str) -> bool:
+    """True if the interval's number is actually written in the quote (as digits or a common word)."""
+    q = quote.lower()
+    digits = f"{value:g}"
+    if re.search(rf"(?<![\d.,]){re.escape(digits)}(?![\d])", q.replace(",", "")):
+        return True
+    if value != int(value):
+        return False
+    if value == 1 and re.search(r"\b(a|an|every|each|per)\s+(day|week|month|year|hour|season)", q):
+        return True
+    return any(w in q for w in _NUMBER_WORDS.get(int(value), ()))
+
+
+def _drop_unstated_intervals(task: MaintenanceTask) -> None:
+    """Remove intervals whose number is not in the source quote, and flag the task for review."""
+    if not task.source_quote:
+        return
+    kept = [iv for iv in task.intervals if interval_in_quote(iv.value, task.source_quote)]
+    if len(kept) < len(task.intervals):
+        dropped = ", ".join(f"{iv.value:g} {iv.unit.value}" for iv in task.intervals if iv not in kept)
+        task.intervals = kept
+        task.needs_review = True
+        note = f"Removed interval not stated in the source quote: {dropped}."
+        task.review_note = f"{task.review_note} {note}".strip()
 
 
 def extract_tasks(
@@ -63,6 +104,7 @@ def extract_tasks(
         result = llm.parse(model=model, system=system, user=window, schema=ExtractionResult)
         for extracted in result.tasks:
             task = MaintenanceTask(**extracted.model_dump(exclude={"asset_id"}), asset_id=asset_id)
+            _drop_unstated_intervals(task)
             # The same task often appears in a summary table and in the body text.
             # Keep the first occurrence but merge any extra intervals/part numbers.
             key = task_key(task)
