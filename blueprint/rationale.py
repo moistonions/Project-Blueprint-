@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from blueprint.llm import LLM
 from blueprint.models import ExtraWorkStatus, Finding, FindingType, Rationale
+from blueprint.safety import UNTRUSTED_RULE, wrap
 from blueprint.stores.vector import Hit, VectorStore
 
 RATIONALE_TYPES = {FindingType.VENDOR_ADDITION, FindingType.TIGHTENED_INTERVAL}
@@ -29,7 +30,10 @@ than the OEM requires. Use only the evidence excerpts provided.
   Leave empty if nothing in the excerpts supports the reason.
 - status: "justified" if the excerpts give a concrete site or failure reason, "unjustified" if they
   show the extra work is not needed, "unknown" if they say nothing either way.
-- confidence is 0-1: how directly the quotes support the rationale."""
+- confidence is 0-1: how directly the quotes support the rationale.
+
+"""
+_SYSTEM += UNTRUSTED_RULE
 
 
 class _Draft(BaseModel):
@@ -71,7 +75,7 @@ def explain(llm: LLM, store: VectorStore, finding: Finding, *, model: str, k: in
     evidence = "\n\n".join(
         f"[{h.metadata.get('filename', '?')} p.{h.metadata.get('page', '?')}]\n{h.text}" for h in hits
     ) or "(no field documents or tickets found for this asset)"
-    user = f"Deviation: {finding.message}\n\nEvidence excerpts:\n{evidence}"
+    user = f"Deviation: {finding.message}\n\nEvidence excerpts:\n{wrap('evidence', evidence)}"
     draft = llm.parse(model=model, system=_SYSTEM, user=user, schema=_Draft)
 
     quotes = verified_quotes(draft.quotes, hits)

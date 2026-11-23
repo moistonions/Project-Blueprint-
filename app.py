@@ -1,10 +1,16 @@
 """Streamlit UI for Project Blueprint.
 
 Run with:  streamlit run app.py
+
+Pages: About Us, Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask, Methodology.
+Configuration comes from environment variables or .env locally, and from st.secrets when hosted
+(Streamlit Community Cloud). Set BLUEPRINT_APP_PASSWORD to require a password.
 """
 
 from __future__ import annotations
 
+import hmac
+import os
 import traceback
 from contextlib import contextmanager
 from datetime import date
@@ -27,6 +33,7 @@ from blueprint.normalize import format_intervals, parse_intervals
 from blueprint.pipeline import Blueprint
 from blueprint.rag import source_label
 from blueprint.tickets import CSV_TEMPLATE, parse_csv
+from blueprint.ui_docs import render_about, render_methodology, show_notice
 
 st.set_page_config(page_title="Project Blueprint", page_icon="🛠️", layout="wide", menu_items={})
 
@@ -63,7 +70,41 @@ TYPE_HELP = {
     FindingType.VENDOR_ADDITION: "The vendor does work the OEM doesn't require. See Field wisdom for why.",
 }
 PROVIDER_NAMES = {"anthropic": "Claude", "openai": "OpenAI"}
-PAGES = ["Ingest", "Baseline sign-off", "Checklist entry", "Gap report", "Field wisdom", "Ask"]
+PAGES = ["About Us", "Ingest", "Baseline sign-off", "Checklist entry", "Gap report", "Field wisdom", "Ask",
+         "Methodology"]
+
+
+def load_secrets_into_env() -> None:
+    """On Streamlit Community Cloud, keys are pasted as secrets; copy top-level ones into the
+    environment so blueprint.config reads them like a local .env. Real env vars win."""
+    try:
+        items = dict(st.secrets)
+    except Exception:  # noqa: BLE001  (no secrets.toml locally is normal)
+        return
+    for k, v in items.items():
+        if isinstance(v, (str, int, float, bool)):
+            os.environ.setdefault(k, str(v))
+
+
+def password_ok() -> bool:
+    """Simple shared-password gate, on when BLUEPRINT_APP_PASSWORD is set."""
+    expected = os.getenv("BLUEPRINT_APP_PASSWORD")
+    if not expected or st.session_state.get("authed"):
+        return True
+    st.title("Project Blueprint")
+    show_notice(expanded=True)
+    pw = st.text_input("Password", type="password")
+    if pw:
+        if hmac.compare_digest(pw.encode(), expected.encode()):
+            st.session_state["authed"] = True
+            st.rerun()
+        st.error("Wrong password.")
+    return False
+
+
+load_secrets_into_env()
+if not password_ok():
+    st.stop()
 
 
 @st.cache_resource
@@ -94,6 +135,8 @@ def llm_guard(what: str):
     """Show a readable error instead of a traceback when an LLM or network call fails."""
     try:
         yield
+    except ValueError as e:  # bad input (e.g. an over-long question), not an outage
+        st.warning(str(e))
     except Exception as e:  # noqa: BLE001  (Streamlit's own stop/rerun signals are BaseException)
         st.error(
             f"{what} didn't finish: {e}. This step calls the LLM, so check the API key and the "
@@ -128,8 +171,20 @@ def sample_badge(is_sample: bool) -> str:
     return "🧪 SAMPLE · " if is_sample else ""
 
 
+show_notice(expanded=page == "About Us")
+
+# ---------------------------------------------------------------- About Us
+if page == "About Us":
+    render_about()
+    st.info("To try it: open **Ingest**, expand **Demo scenario: Panda 60i generator** and click "
+            "**Load Panda 60i demo**, then open the **Gap report**.")
+
+# ---------------------------------------------------------------- Methodology
+elif page == "Methodology":
+    render_methodology()
+
 # ---------------------------------------------------------------- Ingest
-if page == "Ingest":
+elif page == "Ingest":
     st.header("Ingest documents")
     if flash := st.session_state.pop("flash", None):
         st.success(flash)
