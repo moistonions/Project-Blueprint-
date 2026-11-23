@@ -8,6 +8,7 @@ from blueprint.ingest import Page
 from blueprint.llm import LLM
 from blueprint.models import ExtractionResult, MaintenanceTask, SourceKind
 from blueprint.normalize import task_key
+from blueprint.safety import UNTRUSTED_RULE, wrap
 
 _SYSTEM = """You extract preventive-maintenance requirements from {kind_desc}.
 
@@ -31,7 +32,10 @@ Rules:
 - Vague timing ("regularly", "periodically", "from time to time", "as necessary") is not an interval:
   leave intervals empty and set needs_review.
 - Skip safety warnings, troubleshooting tables and one-off repair procedures.
-- Use asset_id "{asset_id}" for every task."""
+- Use asset_id "{asset_id}" for every task.
+
+"""
+_SYSTEM += UNTRUSTED_RULE.replace("{", "{{").replace("}", "}}")
 
 _KIND_DESC = {
     SourceKind.OEM: "an OEM equipment manual or maintenance specification",
@@ -122,7 +126,7 @@ def extract_tasks(
     for p in pages:
         page_text[p.number] = page_text.get(p.number, "") + p.text
     for window in _windows(pages, max_chars):
-        result = llm.parse(model=model, system=system, user=window, schema=ExtractionResult)
+        result = llm.parse(model=model, system=system, user=wrap("document", window), schema=ExtractionResult)
         for extracted in result.tasks:
             task = MaintenanceTask(**extracted.model_dump(exclude={"asset_id"}), asset_id=asset_id)
             _drop_unstated_intervals(task, page_text.get(task.page or -1, ""))

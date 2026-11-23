@@ -8,3 +8,4 @@ data/oem_manuals/*
 !data/oem_manuals/README.md
 data/vendor_docs/*
 !data/vendor_docs/README.md
+.streamlit/secrets.toml

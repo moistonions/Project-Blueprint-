@@ -39,7 +39,9 @@ vendor checklists (CSV or form) ──► tickets + meter hours ──┘   (det
 | `blueprint/llm.py` | Claude (default) and OpenAI clients, local or OpenAI embeddings |
 | `blueprint/stores/structured.py` | SQLite: documents (with baseline status), tasks, tickets, findings, rationales |
 | `blueprint/stores/vector.py` | `VectorStore` interface + `ChromaStore`. Add a `PgVectorStore` here to switch to pgvector. |
-| `app.py` | Streamlit UI: Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask |
+| `blueprint/safety.py` | Prompt-injection safeguards: untrusted text wrapped in tags, shared security rule in every system prompt, question length cap |
+| `blueprint/ui_docs.py` | In-app IMPORTANT NOTICE, About Us and Methodology pages (flowcharts per use case) |
+| `app.py` | Streamlit UI: About Us, Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask, Methodology; optional password gate |
 
 ### Baseline sign-off
 
@@ -93,6 +95,10 @@ cp .env.example .env          # add ANTHROPIC_API_KEY
 streamlit run app.py
 ```
 
+For a demo, open **Ingest → Demo scenario: Panda 60i generator** and click
+**Load Panda 60i demo** (a few LLM calls to read the simulated contract), then
+open the **Gap report** and click a row to see the OEM and vendor source quotes.
+
 By default the app uses **Claude** (`claude-opus-5-5`) for extraction, the
 rationale agent and chat, so you only need an `ANTHROPIC_API_KEY`. Claude has
 no embeddings API, so the search index uses a small local embedding model
@@ -104,6 +110,22 @@ To use OpenAI instead, set `BLUEPRINT_LLM_PROVIDER=openai` and `OPENAI_API_KEY`
 in `.env`; see `.env.example`. Switching embeddings starts a fresh search
 index, because vectors from different models can't be mixed. Data is stored
 under `storage/` (git-ignored).
+
+### Deploying to Streamlit Community Cloud
+
+The app is ready for [Streamlit Community Cloud](https://share.streamlit.io) (free):
+
+1. Sign in at share.streamlit.io with the GitHub account that owns this repo.
+2. **Create app → Deploy a public app from GitHub**: repository `moistonions/Project-Blueprint-`,
+   branch `main`, main file `app.py`. Under **Advanced settings** pick Python 3.12.
+3. In **Advanced settings → Secrets**, paste the contents of
+   [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example) with your real API key and a password.
+   Top-level secrets are copied into environment variables at start-up, so no other config is needed.
+4. Deploy. The first start takes a few minutes (installing packages and the ~80 MB embedding model).
+
+Storage on Community Cloud is temporary: the SQLite and Chroma files under `storage/` are wiped
+when the app restarts or sleeps after inactivity. Before a demo, open **Ingest** and click
+**Load Panda 60i demo** (a few LLM calls) to rebuild the data.
 
 ### Adding real documents
 

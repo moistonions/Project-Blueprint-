@@ -1,10 +1,18 @@
 """Streamlit UI for Project Blueprint.
 
 Run with:  streamlit run app.py
+
+Pages: About Us, Ingest, Baseline sign-off, Checklist entry, Gap report, Field wisdom, Ask, Methodology.
+Configuration comes from environment variables or .env locally, and from st.secrets when hosted
+(Streamlit Community Cloud). Set BLUEPRINT_APP_PASSWORD to require a password.
 """
 
 from __future__ import annotations
 
+import hmac
+import os
+import traceback
+from contextlib import contextmanager
 from datetime import date
 
 import pandas as pd
@@ -25,8 +33,9 @@ from blueprint.normalize import format_intervals, parse_intervals
 from blueprint.pipeline import Blueprint
 from blueprint.rag import source_label
 from blueprint.tickets import CSV_TEMPLATE, parse_csv
+from blueprint.ui_docs import render_about, render_methodology, show_notice
 
-st.set_page_config(page_title="Project Blueprint", page_icon="🛠️", layout="wide")
+st.set_page_config(page_title="Project Blueprint", page_icon="🛠️", layout="wide", menu_items={})
 
 KIND_LABELS = {
     SourceKind.OEM: "OEM manual / spec",
@@ -35,7 +44,67 @@ KIND_LABELS = {
 }
 SEVERITY_ICON = {Severity.CRITICAL: "🔴", Severity.WARNING: "🟠", Severity.INFO: "🔵"}
 STATUS_ICON = {ExtraWorkStatus.JUSTIFIED: "✅", ExtraWorkStatus.UNJUSTIFIED: "⛔", ExtraWorkStatus.UNKNOWN: "❔"}
-PAGES = ["Ingest", "Baseline sign-off", "Checklist entry", "Gap report", "Field wisdom", "Ask"]
+SEVERITY_ORDER = {Severity.CRITICAL: 0, Severity.WARNING: 1, Severity.INFO: 2}
+TYPE_LABELS = {
+    FindingType.MISSING_TASK: "Missing task",
+    FindingType.BEYOND_TOLERANCE: "Interval beyond tolerance",
+    FindingType.LONGER_INTERVAL: "Longer interval (within tolerance)",
+    FindingType.MISSING_INTERVAL_BASIS: "Interval basis not tracked",
+    FindingType.SPEC_MISMATCH: "Part / fluid spec differs",
+    FindingType.EXECUTION_GAP: "Done late or skipped",
+    FindingType.NEEDS_REVIEW: "Needs review (counts as failed)",
+    FindingType.TIGHTENED_INTERVAL: "Vendor services more often",
+    FindingType.VENDOR_ADDITION: "Vendor extra task",
+}
+TYPE_HELP = {
+    FindingType.MISSING_TASK: "The OEM requires this task but the vendor schedule has nothing matching it.",
+    FindingType.BEYOND_TOLERANCE: "The vendor's interval is longer than the OEM's by more than the tolerance "
+                                  "(zero for safety-critical tasks).",
+    FindingType.LONGER_INTERVAL: "The vendor's interval is longer than the OEM's but still within tolerance.",
+    FindingType.MISSING_INTERVAL_BASIS: "The OEM sets e.g. '500 hours or 6 months'; the vendor tracks only one, "
+                                        "or states no interval.",
+    FindingType.SPEC_MISMATCH: "Same task, different part number or fluid spec. Flagged as ambiguous for a person to check.",
+    FindingType.EXECUTION_GAP: "The vendor's checklists show the task done late, or not done since a date.",
+    FindingType.NEEDS_REVIEW: "The extractor wasn't sure about this OEM task and it wasn't resolved at sign-off.",
+    FindingType.TIGHTENED_INTERVAL: "The vendor services more often than the OEM asks. See Field wisdom for why.",
+    FindingType.VENDOR_ADDITION: "The vendor does work the OEM doesn't require. See Field wisdom for why.",
+}
+PROVIDER_NAMES = {"anthropic": "Claude", "openai": "OpenAI"}
+PAGES = ["About Us", "Ingest", "Baseline sign-off", "Checklist entry", "Gap report", "Field wisdom", "Ask",
+         "Methodology"]
+
+
+def load_secrets_into_env() -> None:
+    """On Streamlit Community Cloud, keys are pasted as secrets; copy top-level ones into the
+    environment so blueprint.config reads them like a local .env. Real env vars win."""
+    try:
+        items = dict(st.secrets)
+    except Exception:  # noqa: BLE001  (no secrets.toml locally is normal)
+        return
+    for k, v in items.items():
+        if isinstance(v, (str, int, float, bool)):
+            os.environ.setdefault(k, str(v))
+
+
+def password_ok() -> bool:
+    """Simple shared-password gate, on when BLUEPRINT_APP_PASSWORD is set."""
+    expected = os.getenv("BLUEPRINT_APP_PASSWORD")
+    if not expected or st.session_state.get("authed"):
+        return True
+    st.title("Project Blueprint")
+    show_notice(expanded=True)
+    pw = st.text_input("Password", type="password")
+    if pw:
+        if hmac.compare_digest(pw.encode(), expected.encode()):
+            st.session_state["authed"] = True
+            st.rerun()
+        st.error("Wrong password.")
+    return False
+
+
+load_secrets_into_env()
+if not password_ok():
+    st.stop()
 
 
 @st.cache_resource
@@ -46,13 +115,47 @@ def get_blueprint() -> Blueprint:
 try:
     bp = get_blueprint()
 except RuntimeError as e:
-    st.error(str(e))
+    st.error(f"The app couldn't start: {e}")
+    st.info("Set the API key in `.env` (see `.env.example`) or as an environment variable, then restart the app.")
     st.stop()
 
 st.sidebar.title("Project Blueprint")
 st.sidebar.caption("OEM vs vendor maintenance compliance and field knowledge")
 page = st.sidebar.radio("View", PAGES)
 assets = bp.db.assets()
+st.sidebar.divider()
+st.sidebar.caption(
+    f"🟢 LLM: {PROVIDER_NAMES.get(bp.settings.llm_provider, bp.settings.llm_provider)} "
+    f"({bp.settings.chat_model}), key loaded"
+)
+
+
+@contextmanager
+def llm_guard(what: str):
+    """Show a readable error instead of a traceback when an LLM or network call fails."""
+    try:
+        yield
+    except ValueError as e:  # bad input (e.g. an over-long question), not an outage
+        st.warning(str(e))
+    except Exception as e:  # noqa: BLE001  (Streamlit's own stop/rerun signals are BaseException)
+        st.error(
+            f"{what} didn't finish: {e}. This step calls the LLM, so check the API key and the "
+            "network connection, then try again."
+        )
+        with st.expander("Technical details"):
+            st.code(traceback.format_exc())
+
+
+def run_analysis(asset_id: str):
+    """Run the gap analysis (and the rationale agent). Returns the findings, or None on failure."""
+    with llm_guard("Gap analysis"):
+        with st.spinner("Running gap analysis..."):
+            return bp.analyze(asset_id)
+    return None
+
+
+def task_label(action: str, component: str) -> str:
+    return f"{action} {component}".strip()
 
 
 def asset_picker(key: str, allow_all: bool = False) -> str | None:
@@ -68,9 +171,23 @@ def sample_badge(is_sample: bool) -> str:
     return "🧪 SAMPLE · " if is_sample else ""
 
 
+show_notice(expanded=page == "About Us")
+
+# ---------------------------------------------------------------- About Us
+if page == "About Us":
+    render_about()
+    st.info("To try it: open **Ingest**, expand **Demo scenario: Panda 60i generator** and click "
+            "**Load Panda 60i demo**, then open the **Gap report**.")
+
+# ---------------------------------------------------------------- Methodology
+elif page == "Methodology":
+    render_methodology()
+
 # ---------------------------------------------------------------- Ingest
-if page == "Ingest":
+elif page == "Ingest":
     st.header("Ingest documents")
+    if flash := st.session_state.pop("flash", None):
+        st.success(flash)
     st.write(
         "Upload OEM manuals, vendor contracts and field documents. OEM and vendor documents are "
         "parsed into structured tasks; every document is indexed for search. OEM task lists must be "
@@ -92,7 +209,7 @@ if page == "Ingest":
             st.error("Vendor documents need a vendor name.")
         else:
             for f in files:
-                with st.spinner(f"Processing {f.name}..."):
+                with st.spinner(f"Processing {f.name}..."), llm_guard(f"Processing {f.name}"):
                     try:
                         _, n_tasks, n_chunks = bp.ingest(
                             f.name, f.getvalue(), kind=kind, asset_id=asset_id, vendor=vendor
@@ -100,9 +217,10 @@ if page == "Ingest":
                         st.success(f"{f.name}: {n_tasks} tasks extracted, {n_chunks} chunks indexed")
                     except ValueError as e:
                         st.error(f"{f.name}: {e}")
-            with st.spinner("Running gap analysis..."):
-                findings = bp.analyze(asset_id)
-            st.info(f"{len(findings)} findings for {asset_id}. See the Gap report.")
+            findings = run_analysis(asset_id)
+            if findings is not None:
+                st.info(f"{len(findings)} findings for {asset_id}. Next: check the task list on "
+                        "**Baseline sign-off**, then open the **Gap report**.")
 
     with st.expander("Upload vendor checklist tickets (CSV)"):
         st.caption("Provisional format, one row per task done at a visit. Or use the Checklist entry page.")
@@ -116,9 +234,29 @@ if page == "Ingest":
                 st.error(str(e))
             else:
                 bp.add_tickets(tickets)
-                for a in sorted({t.asset_id for t in tickets}):
-                    bp.analyze(a)
                 st.success(f"Imported {len(tickets)} checklist lines.")
+                for a in sorted({t.asset_id for t in tickets}):
+                    run_analysis(a)
+
+    with st.expander("Demo scenario: Panda 60i generator", expanded=not bp.db.documents()):
+        st.write(
+            "Loads the Panda 60i scenario (`PANDA-60I`): the OEM baseline reviewed from the real Panda and "
+            "engine manuals (engine manual is a placeholder), plus a **simulated** vendor contract and "
+            "checklists with 10 planted gaps. The vendor side is fictional and tagged SAMPLE. Loading it "
+            "also signs off the baseline."
+        )
+        st.caption("Uses the LLM to read the simulated contract and explain vendor extras (a handful of calls). "
+                   "Loading it again is safe.")
+        if st.button("Load Panda 60i demo", type="primary"):
+            from blueprint.scenarios import load_scenario
+
+            with llm_guard("Loading the Panda 60i demo"):
+                with st.spinner("Reading the simulated vendor contract and running the analysis..."):
+                    findings = load_scenario(bp, "panda-60i")
+                st.session_state["flash"] = (
+                    f"Panda 60i demo loaded: {len(findings)} findings. Open the **Gap report** and pick PANDA-60I."
+                )
+                st.rerun()
 
     with st.expander("Synthetic sample data (for testing the pipeline only)"):
         st.write(
@@ -129,9 +267,10 @@ if page == "Ingest":
         if st.button("Load sample data"):
             from blueprint.samples import load_samples
 
-            with st.spinner("Loading samples..."):
-                load_samples(bp)
-            st.rerun()
+            with llm_guard("Loading sample data"):
+                with st.spinner("Loading samples..."):
+                    load_samples(bp)
+                st.rerun()
 
     docs = bp.db.documents()
     if docs:
@@ -144,7 +283,7 @@ if page == "Ingest":
                         "Type": KIND_LABELS[d.kind],
                         "Asset": d.asset_id,
                         "Vendor": d.vendor or "",
-                        "Baseline": d.baseline_status.value if d.kind == SourceKind.OEM else "",
+                        "Baseline": d.baseline_status.value.title() if d.kind == SourceKind.OEM else "",
                     }
                     for d in docs
                 ]
@@ -201,9 +340,22 @@ elif page == "Baseline sign-off":
         width="stretch",
         disabled=["source_quote", "page"],
         column_config={
-            "intervals": st.column_config.TextColumn(help="Whichever comes first, e.g. '250 hours; 6 months'"),
-            "safety_critical": st.column_config.CheckboxColumn("safety critical"),
-            "needs_review": st.column_config.CheckboxColumn("needs review"),
+            "component": st.column_config.TextColumn("Component", width="medium"),
+            "action": st.column_config.TextColumn("Action", width="small"),
+            "intervals": st.column_config.TextColumn(
+                "Interval (whichever first)", help="Whichever comes first, e.g. '250 hours; 6 months'"
+            ),
+            "part_ids": st.column_config.TextColumn("Part numbers", help="Comma-separated"),
+            "spec": st.column_config.TextColumn("Fluid / part spec"),
+            "safety_critical": st.column_config.CheckboxColumn(
+                "Safety critical", help="Zero tolerance: any longer vendor interval is a critical gap"
+            ),
+            "needs_review": st.column_config.CheckboxColumn(
+                "Needs review", help="Counts as failed in the gap report until unticked"
+            ),
+            "review_note": st.column_config.TextColumn("Review note", width="medium"),
+            "source_quote": st.column_config.TextColumn("Source quote (from manual)", width="large"),
+            "page": st.column_config.NumberColumn("Page", width="small"),
         },
         key=f"baseline_{doc.doc_id}",
     )
@@ -236,11 +388,11 @@ elif page == "Baseline sign-off":
     n_review = sum(t.needs_review for t in tasks)
     if col2.button("Approve baseline", type="primary", disabled=doc.baseline_status == BaselineStatus.APPROVED):
         bp.approve_baseline(doc.doc_id)
-        with st.spinner("Running gap analysis..."):
-            bp.analyze(doc.asset_id)
-        st.rerun()
+        if run_analysis(doc.asset_id) is not None:
+            st.rerun()
     if n_review:
         st.caption(f"{n_review} task(s) still need review and will count as failed.")
+    st.caption("Hover a column heading for help. Saving edits returns the baseline to draft.")
 
 # ---------------------------------------------------------------- Checklist entry
 elif page == "Checklist entry":
@@ -258,11 +410,16 @@ elif page == "Checklist entry":
         visit = c2.date_input("Visit date", value=date.today())
         meter = c3.number_input("Hour-meter reading", min_value=0.0, step=1.0, value=None)
         done = []
+        h = st.columns([6, 1.3, 4])
+        h[0].markdown("**Task done** :gray[(interval)]")
+        h[1].markdown("**Time spent (h)**")
+        h[2].markdown("**Notes**")
         # Inside a form nothing reruns until submit, so every row shows its inputs up front.
         for i, t in enumerate(schedule):
-            cols = st.columns([4, 1, 4])
+            cols = st.columns([6, 1.3, 4])
+            interval = format_intervals(t.intervals) or "no interval"
             ticked = cols[0].checkbox(
-                f"{t.action} {t.component} ({format_intervals(t.intervals) or 'no interval'})", key=f"chk_{i}"
+                f"{task_label(t.action, t.component)} :gray[({interval})]", key=f"chk_{i}"
             )
             hrs = cols[1].number_input("time spent (h)", min_value=0.0, step=0.25, key=f"hrs_{i}",
                                        label_visibility="collapsed")
@@ -287,8 +444,8 @@ elif page == "Checklist entry":
                                       meter_hours=meter, notes=other_note))
             if tickets:
                 bp.add_tickets(tickets)
-                bp.analyze(asset_id)
                 st.success(f"Recorded {len(tickets)} task(s).")
+                run_analysis(asset_id)
             else:
                 st.error("Tick at least one task.")
 
@@ -296,7 +453,7 @@ elif page == "Checklist entry":
     if recent:
         st.subheader("Recent checklist lines")
         st.dataframe(pd.DataFrame([
-            {"Date": t.date, "Task": f"{t.action} {t.component}", "Meter h": t.meter_hours,
+            {"Date": t.date, "Task": task_label(t.action, t.component), "Meter h": t.meter_hours,
              "Time h": t.time_spent_hours, "Vendor": t.vendor or "", "Notes": sample_badge(t.is_sample) + t.notes}
             for t in reversed(recent)
         ]), hide_index=True, width="stretch")
@@ -317,10 +474,12 @@ elif page == "Gap report":
     if rate is not None:
         st.caption(f"Usage rate from vendor checklists: {rate:.0f} running hours / month")
     if st.button("Re-run analysis"):
-        with st.spinner("Analyzing..."):
-            bp.analyze(asset_id)
+        run_analysis(asset_id)
 
-    findings = bp.db.findings(asset_id)
+    findings = sorted(
+        bp.db.findings(asset_id),
+        key=lambda f: (SEVERITY_ORDER[f.severity], list(FindingType).index(f.type)),
+    )
     if not findings:
         st.info("No findings. The asset needs an approved OEM baseline and a vendor schedule or tickets.")
         st.stop()
@@ -331,24 +490,77 @@ elif page == "Gap report":
         col.metric(f"{SEVERITY_ICON[sev]} {sev.value.title()}", sum(f.severity == sev for f in findings))
     cols[3].metric("Needs review (failed)", failed)
 
+    with st.expander("What do the finding types mean?"):
+        present = {f.type for f in findings}
+        st.markdown("\n".join(
+            f"- **{TYPE_LABELS[t]}**: {TYPE_HELP[t]}" for t in FindingType if t in present
+        ))
+
     show = st.multiselect("Severity", list(Severity), default=[Severity.CRITICAL, Severity.WARNING],
                           format_func=lambda s: s.value.title())
-    rows = [
-        {
-            "Severity": f"{SEVERITY_ICON[f.severity]} {f.severity.value}",
-            "Type": f.type.value.replace("_", " "),
-            "Finding": f.message,
-            "Match": (f"{f.match_basis.value} ({f.match_confidence:.0%})" if f.match_basis else ""),
-            "Vendor": f.vendor or "",
-            "OEM source": (f.oem_task.source_quote if f.oem_task else ""),
-            "Vendor source": (f.vendor_task.source_quote if f.vendor_task else ""),
-        }
-        for f in findings
-        if f.severity in show
-    ]
-    df = pd.DataFrame(rows)
-    st.dataframe(df, hide_index=True, width="stretch")
-    st.caption("Match shows how an OEM task was paired with the vendor's; lower confidence deserves a manual check.")
+    if Severity.INFO not in show and any(f.severity == Severity.INFO for f in findings):
+        st.caption("Info findings (vendor does more than OEM) are hidden; add Info above, or see **Field wisdom**.")
+    shown = [f for f in findings if f.severity in show]
+
+    def quote(t: MaintenanceTask | None) -> str:
+        return t.source_quote if t else ""
+
+    df = pd.DataFrame(
+        [
+            {
+                "Severity": f"{SEVERITY_ICON[f.severity]} {f.severity.value.title()}",
+                "Type": TYPE_LABELS[f.type],
+                "Finding": f.message,
+                "Match": (f"{f.match_basis.value.replace('_', ' ')} ({f.match_confidence:.0%})"
+                          if f.match_basis else ""),
+                "Vendor": f.vendor or "",
+                "OEM source": quote(f.oem_task),
+                "Vendor source": quote(f.vendor_task),
+            }
+            for f in shown
+        ],
+        columns=["Severity", "Type", "Finding", "Match", "Vendor", "OEM source", "Vendor source"],
+    )
+    event = st.dataframe(
+        df[["Severity", "Type", "Finding", "Match"]],
+        hide_index=True,
+        width="stretch",
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"gap_table_{asset_id}",
+        column_config={
+            "Severity": st.column_config.TextColumn(width="small"),
+            "Type": st.column_config.TextColumn(width="medium"),
+            "Finding": st.column_config.TextColumn(width="large"),
+            "Match": st.column_config.TextColumn(
+                width="small", help="How the OEM task was paired with the vendor's; low confidence deserves a check"
+            ),
+        },
+    )
+    selected = event.selection.rows if event and event.selection else []
+    if not selected:
+        st.caption("👆 Select a row to see the full finding with the OEM and vendor source quotes side by side.")
+    else:
+        f = shown[selected[0]]
+        with st.container(border=True):
+            st.markdown(f"{SEVERITY_ICON[f.severity]} **{TYPE_LABELS[f.type]}**")
+            st.write(f.message)
+            st.caption(TYPE_HELP[f.type])
+            left, right = st.columns(2)
+            for col, title, t in ((left, "OEM requirement", f.oem_task), (right, f"Vendor ({f.vendor or 'n/a'})", f.vendor_task)):
+                col.markdown(f"**{title}**")
+                if t is None:
+                    col.caption("No matching task.")
+                    continue
+                col.write(f"{task_label(t.action, t.component)}, every {format_intervals(t.intervals) or 'no interval'}")
+                if t.spec or t.part_ids:
+                    col.caption(" · ".join(x for x in [t.spec or "", ", ".join(t.part_ids)] if x))
+                if t.source_quote:
+                    col.markdown(f"> {t.source_quote}")
+                if t.page:
+                    col.caption(f"Page {t.page}")
+            if f.match_basis:
+                st.caption(f"Matched by {f.match_basis.value.replace('_', ' ')}, confidence {f.match_confidence:.0%}.")
     st.download_button("Download CSV", df.to_csv(index=False), file_name=f"gap-report-{asset_id}.csv")
 
 # ---------------------------------------------------------------- Field wisdom
@@ -362,20 +574,36 @@ elif page == "Field wisdom":
     rationales = bp.db.rationales(asset_id)
     if not rationales:
         st.info("No vendor additions or tightened intervals recorded yet.")
+
+    # Show the vendor's own wording for each task rather than the internal matching key.
+    names: dict[tuple[str, str], tuple[str, str]] = {}
+    for a in {r.asset_id for r in rationales}:
+        for f in bp.db.findings(a):
+            t = f.vendor_task or f.oem_task
+            if t:
+                names.setdefault((a, f.task_key), (task_label(t.action, t.component),
+                                                   format_intervals(t.intervals)))
+
+    def fallback_label(key: str) -> str:
+        component, _, action = key.partition("|")
+        return task_label(action, component)
+
     for r in rationales:
+        label, interval = names.get((r.asset_id, r.task_key), (fallback_label(r.task_key), ""))
         with st.container(border=True):
             st.markdown(
-                f"**{r.asset_id} · {r.vendor or 'n/a'}** · `{r.task_key}` · "
-                f"{STATUS_ICON[r.status]} {r.status.value}"
+                f"**{label[:1].upper() + label[1:]}**" + (f" :gray[every {interval}]" if interval else "")
+                + f" · {STATUS_ICON[r.status]} {r.status.value.title()}"
             )
+            st.caption(f"{r.asset_id} · {r.vendor or 'vendor not recorded'}")
             if r.confirmed:
                 st.write(r.rationale)
             else:
                 st.warning(f"Unconfirmed: {r.rationale}")
             if r.conditions:
                 st.write("Conditions: " + ", ".join(r.conditions))
-            for quote in r.evidence:
-                st.markdown(f"> {quote}")
+            for q in r.evidence:
+                st.markdown(f"> {q}")
             st.caption(f"Confidence {r.confidence:.0%}")
 
 # ---------------------------------------------------------------- Ask
@@ -392,12 +620,17 @@ elif page == "Ask":
         with st.chat_message("user"):
             st.markdown(question)
         with st.chat_message("assistant"):
-            with st.spinner("Searching..."):
+            answer = None
+            with llm_guard("Answering"), st.spinner("Searching..."):
                 answer = bp.ask(question, asset_id)
-            st.markdown(answer.text)
-            if answer.sources:
-                with st.expander("Sources"):
-                    for i, h in enumerate(answer.sources, 1):
-                        st.markdown(f"**[{i}] {source_label(h)}** (similarity {h.score:.2f})")
-                        st.caption(h.text[:500])
-        history.append({"role": "assistant", "content": answer.text})
+            if answer is not None:
+                st.markdown(answer.text)
+                if answer.sources:
+                    with st.expander("Sources"):
+                        for i, h in enumerate(answer.sources, 1):
+                            st.markdown(f"**[{i}] {source_label(h)}** (similarity {h.score:.2f})")
+                            st.caption(h.text[:500])
+        if answer is not None:
+            history.append({"role": "assistant", "content": answer.text})
+        else:
+            history.pop()  # don't keep a question that got no answer
