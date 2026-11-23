@@ -70,6 +70,27 @@ TYPE_HELP = {
     FindingType.VENDOR_ADDITION: "The vendor does work the OEM doesn't require. See Field wisdom for why.",
 }
 PROVIDER_NAMES = {"anthropic": "Claude", "openai": "OpenAI"}
+# Sidebar labels: the workflow pages are numbered in the order a new user should visit them.
+NAV_LABELS = {
+    "About Us": "🏠 About Us (start here)",
+    "Ingest": "1 · Load documents",
+    "Baseline sign-off": "2 · Sign off OEM baseline",
+    "Checklist entry": "3 · Log a vendor visit (optional)",
+    "Gap report": "4 · Review compliance gaps",
+    "Field wisdom": "5 · See why vendors do more",
+    "Ask": "6 · Ask a question",
+    "Methodology": "📘 Methodology",
+}
+NAV_CAPTIONS = {
+    "About Us": "What the app does and how to use it",
+    "Ingest": "Load the demo or upload manuals and contracts",
+    "Baseline sign-off": "Check and approve the OEM task list",
+    "Checklist entry": "Record tasks a vendor did on site",
+    "Gap report": "Where the vendor does less than the OEM",
+    "Field wisdom": "Reasons behind extra vendor work",
+    "Ask": "Chat with documents and findings",
+    "Methodology": "How it works, with flowcharts",
+}
 PAGES = ["About Us", "Ingest", "Baseline sign-off", "Checklist entry", "Gap report", "Field wisdom", "Ask",
          "Methodology"]
 
@@ -93,7 +114,7 @@ def password_ok() -> bool:
         return True
     st.title("Project Blueprint")
     show_notice(expanded=True)
-    pw = st.text_input("Password", type="password")
+    pw = st.text_input("Password", type="password", help="Ask the project team for the password.")
     if pw:
         if hmac.compare_digest(pw.encode(), expected.encode()):
             st.session_state["authed"] = True
@@ -120,9 +141,33 @@ except RuntimeError as e:
     st.stop()
 
 st.sidebar.title("Project Blueprint")
-st.sidebar.caption("OEM vs vendor maintenance compliance and field knowledge")
-page = st.sidebar.radio("View", PAGES)
+st.sidebar.caption("Check vendor maintenance against OEM requirements, and keep the reasons behind any differences.")
+page = st.sidebar.radio(
+    "Go to",
+    PAGES,
+    key="nav",
+    format_func=NAV_LABELS.get,
+    captions=[NAV_CAPTIONS[p] for p in PAGES],
+    help="New here? Start with About Us, then follow steps 1 to 6 in order.",
+)
 assets = bp.db.assets()
+
+# A small progress tracker so a new user can see where they are in the workflow.
+_docs = bp.db.documents()
+_has_oem = any(d.kind == SourceKind.OEM for d in _docs)
+_approved = any(d.kind == SourceKind.OEM and d.baseline_status == BaselineStatus.APPROVED for d in _docs)
+_has_vendor = any(d.kind == SourceKind.VENDOR for d in _docs)
+_n_findings = sum(len(bp.db.findings(a)) for a in assets)
+st.sidebar.divider()
+st.sidebar.markdown("**Your progress**")
+st.sidebar.markdown(
+    f"{'✅' if _has_oem and _has_vendor else '⬜'} Documents loaded (OEM + vendor)  \n"
+    f"{'✅' if _approved else '⬜'} OEM baseline approved  \n"
+    f"{'✅' if _n_findings else '⬜'} Gap analysis run"
+    + (f" ({_n_findings} findings)" if _n_findings else "")
+)
+if not _docs:
+    st.sidebar.caption("👉 Quickest start: **1 · Load documents** → Load Panda 60i demo.")
 st.sidebar.divider()
 st.sidebar.caption(
     f"🟢 LLM: {PROVIDER_NAMES.get(bp.settings.llm_provider, bp.settings.llm_provider)} "
@@ -161,10 +206,35 @@ def task_label(action: str, component: str) -> str:
 def asset_picker(key: str, allow_all: bool = False) -> str | None:
     options = (["All assets"] if allow_all else []) + assets
     if not options:
-        st.info("No documents yet. Start on the Ingest page.")
+        st.info("Nothing to show yet: no documents have been loaded.")
+        st.button("Go to 1 · Load documents →", on_click=go_to, args=("Ingest",), key=f"empty_{key}", type="primary")
         st.stop()
-    choice = st.selectbox("Asset", options, key=key)
+    choice = st.selectbox(
+        "Asset", options, key=key,
+        help="An asset is one machine (e.g. PANDA-60I). Its OEM manual, vendor contract and checklists share this ID.",
+    )
     return None if choice == "All assets" else choice
+
+
+def go_to(target: str) -> None:
+    """Button callback: switch the sidebar page (runs before the rerun, so it may set the widget's state)."""
+    st.session_state["nav"] = target
+
+
+def page_intro(what: str, steps: list[str]) -> None:
+    """A short 'what is this page / what do I do here' box at the top of each page."""
+    with st.container(border=True):
+        st.markdown(f"**What this page is for:** {what}")
+        st.markdown("**How to use it:**\n" + "\n".join(f"{i}. {s}" for i, s in enumerate(steps, 1)))
+
+
+def next_step(target: str, why: str) -> None:
+    """A clear pointer to the next page in the workflow."""
+    st.divider()
+    c1, c2 = st.columns([3, 2])
+    c1.markdown(f"**Next:** {why}")
+    c2.button(f"Go to {NAV_LABELS[target]} →", on_click=go_to, args=(target,), key=f"next_{target}",
+              type="primary", width="stretch")
 
 
 def sample_badge(is_sample: bool) -> str:
@@ -175,32 +245,86 @@ show_notice(expanded=page == "About Us")
 
 # ---------------------------------------------------------------- About Us
 if page == "About Us":
+    with st.container(border=True):
+        st.markdown(
+            "**New here? A 2-minute tour**\n"
+            "1. **Load documents**: click *Load Panda 60i demo* (or upload your own files).\n"
+            "2. **Sign off OEM baseline**: see the task list taken from the manual. The demo is already approved.\n"
+            "3. **Log a vendor visit** (optional): try recording a site visit.\n"
+            "4. **Review compliance gaps**: click any row to see the OEM and vendor wording side by side.\n"
+            "5. **See why vendors do more**: reasons for extra work, with source quotes.\n"
+            "6. **Ask a question**: e.g. *Which OEM tasks is the vendor missing?*\n\n"
+            "Use the numbered menu on the left to move between steps. Each page also has a **Next** button at the bottom."
+        )
+        st.button("Start: 1 · Load documents →", on_click=go_to, args=("Ingest",), type="primary", key="start_tour")
     render_about()
-    st.info("To try it: open **Ingest**, expand **Demo scenario: Panda 60i generator** and click "
-            "**Load Panda 60i demo**, then open the **Gap report**.")
+    next_step("Ingest", "load the demo or your own documents.")
 
 # ---------------------------------------------------------------- Methodology
 elif page == "Methodology":
+    st.caption("This page explains how the app works behind the scenes. You don't need it to use the app.")
     render_methodology()
+    next_step("About Us", "back to the start.")
 
 # ---------------------------------------------------------------- Ingest
 elif page == "Ingest":
-    st.header("Ingest documents")
+    st.header("Step 1 · Load documents")
     if flash := st.session_state.pop("flash", None):
         st.success(flash)
-    st.write(
-        "Upload OEM manuals, vendor contracts and field documents. OEM and vendor documents are "
-        "parsed into structured tasks; every document is indexed for search. OEM task lists must be "
-        "signed off on the **Baseline sign-off** page before any comparison runs."
+    page_intro(
+        "getting documents into the app. OEM manuals and vendor contracts are read by the LLM and turned into "
+        "task lists; every document is also indexed so you can search it on the Ask page.",
+        [
+            "**Quickest:** click **Load Panda 60i demo** below. It loads a ready-made generator example.",
+            "**Or** upload your own files under *Option B*: pick the files, say what kind of document they are, "
+            "and give the machine an asset ID.",
+            "Then go to **2 · Sign off OEM baseline** to check the OEM task list before any comparison runs.",
+        ],
     )
+
+    st.subheader("Option A: load the demo (recommended)")
+    with st.container(border=True):
+        st.write(
+            "The **Panda 60i generator** example (`PANDA-60I`): an OEM task list reviewed from the real Panda and "
+            "engine manuals (the engine manual is a placeholder), plus a **simulated** vendor contract and "
+            "checklists with 10 planted gaps. The vendor side is fictional and tagged SAMPLE. The baseline "
+            "is signed off for you."
+        )
+        st.caption("Takes about a minute: the LLM reads the simulated contract and explains vendor extras. "
+                   "Loading it again is safe. The hosted app clears its data when it restarts, so reload before a demo.")
+        if st.button("Load Panda 60i demo", type="primary"):
+            from blueprint.scenarios import load_scenario
+
+            with llm_guard("Loading the Panda 60i demo"):
+                with st.spinner("Reading the simulated vendor contract and running the analysis..."):
+                    findings = load_scenario(bp, "panda-60i")
+                st.session_state["flash"] = (
+                    f"Panda 60i demo loaded: {len(findings)} findings. Next, open **4 · Review compliance gaps** "
+                    "(or check the task list on **2 · Sign off OEM baseline** first)."
+                )
+                st.rerun()
+
+    st.subheader("Option B: upload your own documents")
     with st.form("upload", clear_on_submit=True):
         files = st.file_uploader(
-            "Files", type=[s.lstrip(".") for s in SUPPORTED_SUFFIXES], accept_multiple_files=True
+            "Files", type=[s.lstrip(".") for s in SUPPORTED_SUFFIXES], accept_multiple_files=True,
+            help="Text-based PDFs work best. Scanned PDFs need OCR first.",
         )
-        kind = st.selectbox("Document type", list(SourceKind), format_func=KIND_LABELS.get)
-        asset_id = st.text_input("Asset ID / tag", placeholder="e.g. GEN-01").strip()
-        vendor = st.text_input("Vendor (required for vendor documents)").strip() or None
-        submitted = st.form_submit_button("Ingest")
+        kind = st.selectbox(
+            "Document type", list(SourceKind), format_func=KIND_LABELS.get,
+            help="OEM manual: what the manufacturer requires. Vendor contract: what the vendor commits to do. "
+                 "Field report: notes and emails that may explain why the vendor does extra work.",
+        )
+        asset_id = st.text_input(
+            "Asset ID / tag", placeholder="e.g. GEN-01",
+            help="Use the same ID for every document about the same machine, so they get compared with each other.",
+        ).strip()
+        vendor = st.text_input(
+            "Vendor (required for vendor documents)", placeholder="e.g. Example Marine Services",
+            help="Leave empty for OEM manuals.",
+        ).strip() or None
+        st.caption("Upload the OEM manual and the vendor contract for the same asset ID. Each file takes a minute or so.")
+        submitted = st.form_submit_button("Upload and process", type="primary")
 
     if submitted:
         if not files or not asset_id:
@@ -220,10 +344,11 @@ elif page == "Ingest":
             findings = run_analysis(asset_id)
             if findings is not None:
                 st.info(f"{len(findings)} findings for {asset_id}. Next: check the task list on "
-                        "**Baseline sign-off**, then open the **Gap report**.")
+                        "**2 · Sign off OEM baseline**, then open **4 · Review compliance gaps**.")
 
-    with st.expander("Upload vendor checklist tickets (CSV)"):
-        st.caption("Provisional format, one row per task done at a visit. Or use the Checklist entry page.")
+    with st.expander("More: upload vendor checklists as a CSV"):
+        st.caption("For many visits at once. One row per task done at a visit (format is provisional). "
+                   "To enter a single visit by hand, use **3 · Log a vendor visit** instead.")
         st.download_button("Download CSV template", CSV_TEMPLATE, file_name="checklist-template.csv")
         csv_file = st.file_uploader("Checklist CSV", type=["csv"], key="tickets_csv")
         csv_vendor = st.text_input("Vendor (if not in the CSV)", key="tickets_vendor").strip() or None
@@ -238,27 +363,7 @@ elif page == "Ingest":
                 for a in sorted({t.asset_id for t in tickets}):
                     run_analysis(a)
 
-    with st.expander("Demo scenario: Panda 60i generator", expanded=not bp.db.documents()):
-        st.write(
-            "Loads the Panda 60i scenario (`PANDA-60I`): the OEM baseline reviewed from the real Panda and "
-            "engine manuals (engine manual is a placeholder), plus a **simulated** vendor contract and "
-            "checklists with 10 planted gaps. The vendor side is fictional and tagged SAMPLE. Loading it "
-            "also signs off the baseline."
-        )
-        st.caption("Uses the LLM to read the simulated contract and explain vendor extras (a handful of calls). "
-                   "Loading it again is safe.")
-        if st.button("Load Panda 60i demo", type="primary"):
-            from blueprint.scenarios import load_scenario
-
-            with llm_guard("Loading the Panda 60i demo"):
-                with st.spinner("Reading the simulated vendor contract and running the analysis..."):
-                    findings = load_scenario(bp, "panda-60i")
-                st.session_state["flash"] = (
-                    f"Panda 60i demo loaded: {len(findings)} findings. Open the **Gap report** and pick PANDA-60I."
-                )
-                st.rerun()
-
-    with st.expander("Synthetic sample data (for testing the pipeline only)"):
+    with st.expander("More: synthetic test data (developers only)"):
         st.write(
             "Loads a fictional generator (`SAMPLE-GEN-01`): an OEM spec, a vendor contract with 10 planted "
             "gaps, and checklist tickets. None of it is real OEM or vendor content, and it is tagged SAMPLE "
@@ -275,6 +380,7 @@ elif page == "Ingest":
     docs = bp.db.documents()
     if docs:
         st.subheader("Documents on file")
+        st.caption("Everything loaded so far. 🧪 SAMPLE marks simulated or synthetic data.")
         st.dataframe(
             pd.DataFrame(
                 [
@@ -294,18 +400,26 @@ elif page == "Ingest":
 
 # ---------------------------------------------------------------- Baseline sign-off
 elif page == "Baseline sign-off":
-    st.header("OEM baseline sign-off")
-    st.write(
-        "Check the tasks extracted from each OEM manual against the source, fix anything wrong, mark "
-        "safety-critical tasks (zero tolerance), then approve. Tasks marked **needs review** count as "
-        "failed in the gap report until you resolve them. Saving any edit returns the baseline to draft."
+    st.header("Step 2 · Sign off the OEM baseline")
+    page_intro(
+        "making sure the task list taken from the OEM manual is right before the vendor is judged against it. "
+        "Nothing is compared until a person approves it.",
+        [
+            "Pick the OEM document below.",
+            "Read each row against its **Source quote** (scroll the table right). Click a cell to fix it.",
+            "Tick **Safety critical** for tasks that allow no slack (any longer vendor interval becomes critical).",
+            "Untick **Needs review** once you've resolved a flagged row. Flagged rows count as failed until then.",
+            "Click **Save edits** if you changed anything, then **Approve baseline**.",
+        ],
     )
     oem_docs = bp.db.documents(SourceKind.OEM)
     if not oem_docs:
-        st.info("No OEM documents yet. Upload one on the Ingest page.")
+        st.info("No OEM manual loaded yet. Load the Panda 60i demo or upload an OEM manual first.")
+        st.button("Go to 1 · Load documents →", on_click=go_to, args=("Ingest",), key="empty_baseline", type="primary")
         st.stop()
     doc = st.selectbox(
         "OEM document", oem_docs,
+        help="One task list per OEM manual. The status in brackets shows whether it's approved.",
         format_func=lambda d: f"{sample_badge(d.is_sample)}{d.asset_id} · {d.filename} ({d.baseline_status.value})",
     )
     tasks = bp.db.document_tasks(doc.doc_id)
@@ -392,12 +506,25 @@ elif page == "Baseline sign-off":
             st.rerun()
     if n_review:
         st.caption(f"{n_review} task(s) still need review and will count as failed.")
-    st.caption("Hover a column heading for help. Saving edits returns the baseline to draft.")
+    st.caption("Hover a column heading for help. Saving edits returns the baseline to draft, so approve it again after.")
+    if doc.baseline_status == BaselineStatus.APPROVED:
+        next_step("Gap report", "this baseline is approved, so see where the vendor falls short.")
+    else:
+        st.info("Approve the baseline above to run the comparison.")
 
 # ---------------------------------------------------------------- Checklist entry
 elif page == "Checklist entry":
-    st.header("Vendor checklist entry")
-    st.caption("Provisional form. One submission = one site visit; tick each task done.")
+    st.header("Step 3 · Log a vendor visit (optional)")
+    page_intro(
+        "recording what the vendor actually did on a site visit. This step is optional: the demo already includes "
+        "simulated visits. The dates and hour-meter readings are used to spot tasks done late or skipped.",
+        [
+            "Pick the asset, then fill in the vendor, visit date and the machine's hour-meter reading.",
+            "Tick each task done. Optionally add the time spent and a note on *why* or what was found "
+            "(notes feed the **Field wisdom** page).",
+            "Use **Other task done** for work not on the list, then click **Submit checklist**. The gap analysis re-runs.",
+        ],
+    )
     asset_id = asset_picker("chk_asset")
     vendors = bp.db.vendors(asset_id)
     schedule = (
@@ -408,7 +535,8 @@ elif page == "Checklist entry":
         c1, c2, c3 = st.columns(3)
         vendor = c1.selectbox("Vendor", vendors) if vendors else c1.text_input("Vendor")
         visit = c2.date_input("Visit date", value=date.today())
-        meter = c3.number_input("Hour-meter reading", min_value=0.0, step=1.0, value=None)
+        meter = c3.number_input("Hour-meter reading", min_value=0.0, step=1.0, value=None,
+                                help="Running hours shown on the machine's meter at this visit.")
         done = []
         h = st.columns([6, 1.3, 4])
         h[0].markdown("**Task done** :gray[(interval)]")
@@ -427,7 +555,7 @@ elif page == "Checklist entry":
                                       placeholder="Notes: why, conditions found...")
             if ticked:
                 done.append((t, hrs, note))
-        st.markdown("**Other task done**")
+        st.markdown("**Other task done** :gray[(not on the list above)]")
         o1, o2, o3 = st.columns([2, 1, 4])
         other_comp = o1.text_input("Component")
         other_action = o2.text_input("Action", value="inspect")
@@ -449,6 +577,8 @@ elif page == "Checklist entry":
             else:
                 st.error("Tick at least one task.")
 
+    if not schedule:
+        st.caption("No task list for this asset yet: approve the OEM baseline or load a vendor contract first.")
     recent = bp.db.tickets(asset_id)[-30:]
     if recent:
         st.subheader("Recent checklist lines")
@@ -457,23 +587,34 @@ elif page == "Checklist entry":
              "Time h": t.time_spent_hours, "Vendor": t.vendor or "", "Notes": sample_badge(t.is_sample) + t.notes}
             for t in reversed(recent)
         ]), hide_index=True, width="stretch")
+    next_step("Gap report", "see how this visit changes the compliance picture.")
 
 # ---------------------------------------------------------------- Gap report
 elif page == "Gap report":
-    st.header("Compliance gap report")
-    st.caption(
-        f"Produced by the deterministic rules engine against the approved OEM baseline. Tolerance "
-        f"{bp.settings.tolerance:.0%} on recurring tasks, zero for safety-critical tasks."
+    st.header("Step 4 · Compliance gap report")
+    page_intro(
+        "seeing where the vendor does **less** than the OEM requires: missing tasks, intervals that are too long, "
+        "different parts or fluids, and work done late or skipped. These are found by fixed rules, not by the LLM, "
+        f"so the same input always gives the same result. Tolerance is {bp.settings.tolerance:.0%} on recurring "
+        "tasks and zero for safety-critical ones.",
+        [
+            "Pick the asset. The four numbers give the totals by severity.",
+            "Not sure what a finding type means? Open **What do the finding types mean?**",
+            "**Click the box at the start of any row** to see the full finding with the OEM and vendor wording side by side.",
+            "Use **Download CSV** to share the report.",
+        ],
     )
     asset_id = asset_picker("gap_asset")
     oem_docs = [d for d in bp.db.documents(SourceKind.OEM) if d.asset_id == asset_id]
     if not any(d.baseline_status == BaselineStatus.APPROVED for d in oem_docs):
-        st.warning("No approved OEM baseline for this asset, so no comparison has run. "
-                   "Approve it on the Baseline sign-off page.")
+        st.warning("No approved OEM baseline for this asset, so no comparison has run yet.")
+        st.button("Go to 2 · Sign off OEM baseline →", on_click=go_to, args=("Baseline sign-off",),
+                  key="gap_to_baseline")
     rate = bp.usage_rate(asset_id)
     if rate is not None:
         st.caption(f"Usage rate from vendor checklists: {rate:.0f} running hours / month")
-    if st.button("Re-run analysis"):
+    if st.button("Re-run analysis", help="Only needed after you change documents outside this app; it re-runs "
+                 "automatically after uploads, sign-off and checklist entries."):
         run_analysis(asset_id)
 
     findings = sorted(
@@ -481,7 +622,8 @@ elif page == "Gap report":
         key=lambda f: (SEVERITY_ORDER[f.severity], list(FindingType).index(f.type)),
     )
     if not findings:
-        st.info("No findings. The asset needs an approved OEM baseline and a vendor schedule or tickets.")
+        st.info("No findings yet. This asset needs an approved OEM baseline **and** a vendor contract or checklists.")
+        st.button("Go to 1 · Load documents →", on_click=go_to, args=("Ingest",), key="gap_empty", type="primary")
         st.stop()
 
     failed = sum(f.type == FindingType.NEEDS_REVIEW for f in findings)
@@ -497,7 +639,9 @@ elif page == "Gap report":
         ))
 
     show = st.multiselect("Severity", list(Severity), default=[Severity.CRITICAL, Severity.WARNING],
-                          format_func=lambda s: s.value.title())
+                          format_func=lambda s: s.value.title(),
+                          help="Critical: a clear compliance gap. Warning: worth a check. "
+                               "Info: the vendor does more than the OEM (explained on step 5).")
     if Severity.INFO not in show and any(f.severity == Severity.INFO for f in findings):
         st.caption("Info findings (vendor does more than OEM) are hidden; add Info above, or see **Field wisdom**.")
     shown = [f for f in findings if f.severity in show]
@@ -539,7 +683,7 @@ elif page == "Gap report":
     )
     selected = event.selection.rows if event and event.selection else []
     if not selected:
-        st.caption("👆 Select a row to see the full finding with the OEM and vendor source quotes side by side.")
+        st.caption("👆 Tick the box at the start of a row to see the full finding with the OEM and vendor source quotes side by side.")
     else:
         f = shown[selected[0]]
         with st.container(border=True):
@@ -561,19 +705,28 @@ elif page == "Gap report":
                     col.caption(f"Page {t.page}")
             if f.match_basis:
                 st.caption(f"Matched by {f.match_basis.value.replace('_', ' ')}, confidence {f.match_confidence:.0%}.")
-    st.download_button("Download CSV", df.to_csv(index=False), file_name=f"gap-report-{asset_id}.csv")
+    st.download_button("Download CSV", df.to_csv(index=False), file_name=f"gap-report-{asset_id}.csv",
+                       help="All findings shown above, including the OEM and vendor source quotes.")
+    next_step("Field wisdom", "the other direction: where the vendor does more than the OEM, and why.")
 
 # ---------------------------------------------------------------- Field wisdom
 elif page == "Field wisdom":
-    st.header("Field wisdom: why vendors do more than OEM")
-    st.caption(
-        "Captured by the rationale agent from ticket notes and field documents. A reason without a "
-        "verified source quote is shown as unconfirmed. Status is shown only; there is no approval flow yet."
+    st.header("Step 5 · Field wisdom: why vendors do more")
+    page_intro(
+        "keeping the reasons behind extra vendor work (more often than the OEM asks, or tasks the OEM doesn't "
+        "require), so the next team knows why. The LLM reads ticket notes and field reports and proposes a reason.",
+        [
+            "Each card is one extra task, with its status: ✅ justified, ⛔ unjustified or ❔ unknown.",
+            "A reason counts as confirmed only when its quote is found word for word in the source, shown as a "
+            "grey quote block. Otherwise it's marked **Unconfirmed**.",
+            "To add evidence, upload a field report on step 1 or add notes on step 3.",
+        ],
     )
     asset_id = asset_picker("wisdom_asset", allow_all=True)
     rationales = bp.db.rationales(asset_id)
     if not rationales:
-        st.info("No vendor additions or tightened intervals recorded yet.")
+        st.info("No extra vendor work found yet. Cards appear here once the gap analysis finds the vendor doing "
+                "more than the OEM (Info findings on step 4).")
 
     # Show the vendor's own wording for each task rather than the internal matching key.
     names: dict[tuple[str, str], tuple[str, str]] = {}
@@ -605,10 +758,22 @@ elif page == "Field wisdom":
             for q in r.evidence:
                 st.markdown(f"> {q}")
             st.caption(f"Confidence {r.confidence:.0%}")
+    next_step("Ask", "ask questions across all the documents, gaps and reasons.")
 
 # ---------------------------------------------------------------- Ask
 elif page == "Ask":
-    st.header("Ask about assets, gaps and decisions")
+    st.header("Step 6 · Ask about assets, gaps and decisions")
+    page_intro(
+        "asking plain-English questions about the manuals, the vendor contract, checklists, gaps and reasons. "
+        "Answers only use what's been loaded, and cite numbered sources you can open to check.",
+        [
+            "Optionally narrow the search to one asset.",
+            "Type a question in the box at the bottom of the page and press Enter.",
+            "Open **Sources** under an answer to see where it came from.",
+        ],
+    )
+    st.caption("Try: *Which OEM tasks is the vendor missing?* · *How often must the exhaust pipes be inspected?* · "
+               "*Why does the vendor descale the exhaust mixing elbow?*")
     asset_id = asset_picker("ask_asset", allow_all=True)
     history = st.session_state.setdefault("chat", [])
     for msg in history:

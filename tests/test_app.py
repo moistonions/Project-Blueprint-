@@ -97,3 +97,13 @@ def test_password_gate(bp, monkeypatch):  # noqa: F811
     assert at.error
     at.text_input[0].input("s3cret").run()
     assert at.sidebar.radio[0].value == "About Us"
+
+
+def test_tour_and_next_buttons_move_between_pages(app):
+    assert app.sidebar.radio[0].value == "About Us"
+    next(b for b in app.button if b.label.startswith("Start: 1")).click().run()
+    assert app.sidebar.radio[0].value == "Ingest"
+    app.sidebar.radio[0].set_value("Gap report").run()
+    next(b for b in app.button if b.label.startswith("Go to 5")).click().run()
+    assert app.sidebar.radio[0].value == "Field wisdom"
+    assert not app.exception
