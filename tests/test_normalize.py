@@ -31,6 +31,9 @@ def test_parse_and_format_intervals_round_trip():
     ivs = parse_intervals("250 h or 6 mo; 1.5 years")
     assert format_intervals(ivs) == "250 hours; 6 months; 1.5 years"
     assert parse_intervals(format_intervals(ivs)) == ivs
+    one = parse_intervals("1 months; 1 hours")
+    assert format_intervals(one) == "1 month; 1 hour"
+    assert parse_intervals(format_intervals(one)) == one
     with pytest.raises(ValueError):
         parse_intervals("as required")
 

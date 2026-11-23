@@ -14,6 +14,7 @@ from blueprint.normalize import (
     canonical_parts,
     canonical_spec,
     component_similarity,
+    format_intervals,
     interval_map,
     task_key,
 )
@@ -73,7 +74,7 @@ def match_tasks(
 
 
 def _fmt(task: MaintenanceTask) -> str:
-    ivs = " or ".join(f"{iv.value:g} {iv.unit.value}" for iv in task.intervals) or "no interval"
+    ivs = " or ".join(format_intervals([iv]) for iv in task.intervals) or "no interval"
     return f"{task.action} {task.component} ({ivs})"
 
 

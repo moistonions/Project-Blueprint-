@@ -51,3 +51,32 @@ def test_chat_answers_with_sources(app):
     app.chat_input[0].set_value("why clean radiator fins?").run()
     assert not app.exception
     assert any("answer [1]" in m.value for m in app.markdown)
+
+
+def test_gap_report_lists_critical_first_and_explains_types(app):
+    app.sidebar.radio[0].set_value("Gap report").run()
+    assert not app.exception
+    severities = list(app.dataframe[0].value["Severity"])
+    assert severities == sorted(severities, key=lambda s: ("Critical" not in s, "Warning" not in s))
+    assert any(e.label == "What do the finding types mean?" for e in app.expander)
+
+
+def test_llm_failure_shows_message_not_traceback(app, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(app.bp, "ask", boom)
+    app.sidebar.radio[0].set_value("Ask").run()
+    app.chat_input[0].set_value("anything?").run()
+    assert not app.exception
+    assert any("network down" in e.value for e in app.error)
+
+
+def test_panda_demo_button_loads_scenario(app, monkeypatch):
+    from tests.test_scenario_panda import ContractLLM
+
+    monkeypatch.setattr(app.bp, "llm", ContractLLM())
+    next(b for b in app.button if b.label == "Load Panda 60i demo").click().run()
+    assert not app.exception
+    assert "PANDA-60I" in app.bp.db.assets()
+    assert len(app.bp.db.findings("PANDA-60I")) == 12

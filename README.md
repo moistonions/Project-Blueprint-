@@ -93,6 +93,10 @@ cp .env.example .env          # add ANTHROPIC_API_KEY
 streamlit run app.py
 ```
 
+For a demo, open **Ingest → Demo scenario: Panda 60i generator** and click
+**Load Panda 60i demo** (a few LLM calls to read the simulated contract), then
+open the **Gap report** and click a row to see the OEM and vendor source quotes.
+
 By default the app uses **Claude** (`claude-opus-5-5`) for extraction, the
 rationale agent and chat, so you only need an `ANTHROPIC_API_KEY`. Claude has
 no embeddings API, so the search index uses a small local embedding model

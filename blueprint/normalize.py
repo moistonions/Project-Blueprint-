@@ -179,7 +179,14 @@ _UNIT_ALIASES: dict[str, IntervalUnit] = {
 
 
 def format_intervals(intervals: list[Interval]) -> str:
-    return "; ".join(f"{iv.value:g} {iv.unit.value}" for iv in intervals)
+    """[250 h, 1 month] -> '250 hours; 1 month' (singular for 1, so it reads naturally)."""
+    def one(iv: Interval) -> str:
+        unit = iv.unit.value
+        if iv.value == 1 and unit.endswith("s"):
+            unit = unit[:-1]
+        return f"{iv.value:g} {unit}"
+
+    return "; ".join(one(iv) for iv in intervals)
 
 
 def parse_intervals(text: str) -> list[Interval]:
