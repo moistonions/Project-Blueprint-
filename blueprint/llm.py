@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Protocol, TypeVar
+from dataclasses import dataclass, field
+from typing import Callable, Protocol, TypeVar
 
 from pydantic import BaseModel
 
@@ -52,6 +53,31 @@ class UsageMeter:
             self.unpriced = True
 
 
+@dataclass
+class Tool:
+    """A function the LLM agent may call. run() gets the model's JSON input and returns text."""
+
+    name: str
+    description: str
+    properties: dict
+    run: Callable[[dict], str]
+    ends_run: bool = False  # stop the loop once this tool has been called (e.g. "submit")
+    required: list[str] = field(default_factory=list)
+
+    def schema(self) -> dict:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "strict": True,  # the API guarantees the input matches the schema
+            "input_schema": {
+                "type": "object",
+                "properties": self.properties,
+                "required": self.required or list(self.properties),
+                "additionalProperties": False,
+            },
+        }
+
+
 class Embedder(Protocol):
     name: str  # identifies the vector space; stores keep one collection per embedder
 
@@ -96,6 +122,49 @@ class AnthropicClient:
         if resp.parsed_output is None:
             raise RuntimeError("Claude returned no parseable output.")
         return resp.parsed_output
+
+    def run_agent(self, *, model: str, system: str, user: str, tools: list[Tool], max_turns: int = 6) -> int:
+        """Tool-use loop: Claude decides which tools to call and when to stop.
+
+        Stops when Claude stops calling tools, calls a tool marked ends_run, or after
+        max_turns requests (a cost cap). Returns the number of API requests made.
+        """
+        by_name = {t.name: t for t in tools}
+        messages: list[dict] = [{"role": "user", "content": user}]
+        for turn in range(1, max_turns + 1):
+            resp = self._client.beta.messages.create(
+                model=model,
+                max_tokens=16000,
+                system=system,
+                tools=[t.schema() for t in tools],
+                messages=messages,
+                betas=self._BETAS,
+                fallbacks="default",
+            )
+            self.usage.add(model, getattr(resp, "usage", None))
+            self._check(resp)
+            # Thinking and text blocks go back unchanged with the tool calls, as the API requires.
+            messages.append({"role": "assistant", "content": resp.content})
+            if resp.stop_reason == "pause_turn":
+                continue
+            uses = [b for b in resp.content if b.type == "tool_use"]
+            if not uses:
+                return turn
+            results, finished = [], False
+            for use in uses:
+                tool = by_name.get(use.name)
+                try:
+                    if tool is None:
+                        raise ValueError(f"Unknown tool {use.name}")
+                    content, is_error = tool.run(dict(use.input)), False
+                    finished = finished or tool.ends_run
+                except Exception as e:  # noqa: BLE001  (report tool failures back to the model)
+                    content, is_error = f"Error: {e}", True
+                results.append({"type": "tool_result", "tool_use_id": use.id, "content": content, "is_error": is_error})
+            if finished:
+                return turn
+            messages.append({"role": "user", "content": results})
+        return max_turns
 
     def complete(self, *, model: str, system: str, user: str) -> str:
         resp = self._client.beta.messages.create(

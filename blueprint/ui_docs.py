@@ -92,7 +92,7 @@ def render_about() -> None:
         "tasks (zero tolerance), then approve |\n"
         "| **Checklist entry** | Record a vendor site visit: tasks done, time spent, hour-meter reading, notes |\n"
         "| **Gap report** | See every compliance gap, sorted by severity, with the OEM and vendor source quotes side by side; download as CSV |\n"
-        "| **Field wisdom** | See why the vendor does extra work, with verified quotes, or \"unconfirmed\" when there is no evidence |\n"
+        "| **Field wisdom** | See why the vendor does extra work, found by an AI agent that searches the notes itself; verified quotes, or \"unconfirmed\" when there is no evidence, plus the agent's search steps |\n"
         "| **Ask** | Ask questions across documents, findings and rationales; answers cite numbered sources |\n"
         "| **Methodology** | How the data flows and how each use case works |"
     )
@@ -117,7 +117,7 @@ digraph {
   sql [label="SQLite\\ntasks, tickets,\\nfindings, rationales", shape=cylinder];
   vec [label="Chroma\\nvector index", shape=cylinder];
   rules [label="Deterministic\\nrules engine", fillcolor="#E3F2E1"];
-  agent [label="Rationale chain\\n(retrieve + LLM)", fillcolor="#DCE8F5"];
+  agent [label="Rationale agent\\n(LLM + search tools)", fillcolor="#DCE8F5"];
   rag [label="Ask (RAG chat)", fillcolor="#DCE8F5"];
   oem -> ext; ven -> ext; ext -> sign [label="OEM tasks"]; sign -> sql; ext -> sql [label="vendor tasks"];
   tix -> sql; oem -> vec [label="chunks"]; ven -> vec; fld -> vec; tix -> vec [label="notes"];
@@ -147,13 +147,14 @@ _WISDOM_FLOW = """
 digraph {
   rankdir=TB; node [shape=box, style="rounded,filled", fillcolor="#F2F5F9", fontname="Helvetica", fontsize=11];
   a [label="Rules engine finds the vendor doing MORE\\n(extra task or tighter interval)"];
-  b [label="Retrieval step: two queries x\\n(field docs, vendor docs) in Chroma"];
-  c [label="LLM drafts rationale, conditions,\\nstatus and supporting quotes", fillcolor="#DCE8F5"];
-  d [label="Code verifies each quote appears\\nverbatim in the retrieved text"];
+  b [label="Claude agent decides what to do next", fillcolor="#DCE8F5"];
+  t [label="Tools (run by the app):\\nsearch_field_notes · search_vendor_documents\\nget_oem_requirement  (max 4 searches)", shape=box3d];
+  s [label="submit_rationale: reason, status,\\nconditions, quotes, confidence", fillcolor="#DCE8F5"];
+  d [label="Code verifies each quote appears\\nverbatim in what the tools returned"];
   e [label="Confirmed: rationale + quotes", fillcolor="#E3F2E1"];
   f [label="Unconfirmed: status set to unknown", fillcolor="#FFF4D6"];
   g [label="Stored in SQLite + indexed for Ask;\\nshown on Field wisdom"];
-  a -> b -> c -> d; d -> e [label="quote found"]; d -> f [label="no quote"]; e -> g; f -> g;
+  a -> b; b -> t [label="tool call"]; t -> b [label="results"]; b -> s [label="done"]; s -> d; d -> e [label="quote found"]; d -> f [label="no quote"]; e -> g; f -> g;
 }
 """
 
@@ -184,7 +185,7 @@ def render_methodology() -> None:
         "- **Structured store (SQLite):** documents with baseline status, extracted tasks, checklist tickets, findings, rationales.\n"
         "- **Vector store (Chroma):** overlapping text chunks from every document, plus ticket notes, findings and "
         "rationales, embedded with a small local model (all-MiniLM-L6-v2). The store sits behind an interface so pgvector can replace it.\n"
-        "- **LLM:** Claude by default (OpenAI optional), used for extraction, the rationale chain and chat."
+        "- **LLM:** Claude by default (OpenAI optional), used for extraction, the rationale agent and chat."
     )
 
     st.subheader("Use case 1: Compliance gap detection")
@@ -203,7 +204,11 @@ def render_methodology() -> None:
     st.graphviz_chart(_WISDOM_FLOW)
     st.markdown(
         "- **Prompt chaining:** extraction feeds the rules engine; only its \"vendor does more\" findings go to the "
-        "rationale step, which retrieves evidence and then calls the LLM with a structured schema.\n"
+        "rationale agent.\n"
+        "- **LLM agent with tools:** Claude decides which searches to run (field notes, vendor documents, the OEM "
+        "requirement) and when it has enough, then calls `submit_rationale`. Tool inputs are schema-checked "
+        "(strict tools), searches are capped at 4 and the loop at 6 requests to bound cost, and every tool call is "
+        "logged and shown on the Field wisdom page. If the agent doesn't submit, a fixed retrieve-then-ask chain runs instead.\n"
         "- **Grounding:** a reason only counts as confirmed when its quote is found verbatim in the retrieved text; "
         "otherwise it is shown as unconfirmed with status \"unknown\"."
     )
@@ -232,7 +237,7 @@ def render_methodology() -> None:
         "The Panda 60i scenario plants 10 known gaps in the simulated vendor contract and checklists. A scoring script "
         "(`scripts/score_scenario.py`) checks that all 10 are found with no false alarms; the latest run with Claude "
         "found 10/10 with 0 false alarms. Automated tests cover extraction checks, normalisation, matching, rules, "
-        "the rationale chain and every app page."
+        "the rationale agent (with a scripted model) and every app page."
     )
 
     st.subheader("Limitations")
