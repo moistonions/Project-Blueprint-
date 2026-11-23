@@ -121,3 +121,17 @@ def test_ask_example_question_and_clear_chat(app):
 def test_gap_report_summary_card(app):
     app.sidebar.radio[0].set_value("Gap report").run()
     assert any("compliance gaps for" in m.value for m in app.markdown)
+
+
+def test_field_wisdom_survives_rationales_from_older_code(app, monkeypatch):
+    """A deploy can leave objects built by the previous version (without method/trace) in the cache."""
+    from types import SimpleNamespace
+
+    from blueprint.models import ExtraWorkStatus
+
+    old = SimpleNamespace(asset_id=SAMPLE_ASSET, vendor="v", task_key="fin radiator|clean", rationale="dust",
+                          status=ExtraWorkStatus.JUSTIFIED, confirmed=True, conditions=[], evidence=["q"],
+                          confidence=0.9)
+    monkeypatch.setattr(app.bp.db, "rationales", lambda asset_id=None: [old])
+    app.sidebar.radio[0].set_value("Field wisdom").run()
+    assert not app.exception
