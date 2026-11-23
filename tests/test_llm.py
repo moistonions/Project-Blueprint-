@@ -118,3 +118,15 @@ def test_untrusted_text_cannot_close_its_wrapper():
 
     with pytest.raises(ValueError):
         check_question("x" * 5000)
+
+
+def test_usage_meter_counts_tokens_and_cost():
+    from blueprint.llm import UsageMeter
+
+    m = UsageMeter()
+    m.add("claude-opus-5-5", SimpleNamespace(input_tokens=1_000_000, output_tokens=100_000,
+                                             cache_read_input_tokens=0, cache_creation_input_tokens=0))
+    assert (m.calls, m.input_tokens, m.output_tokens) == (1, 1_000_000, 100_000)
+    assert abs(m.cost_usd - 6.0) < 1e-9  # $4 input + $2 output
+    m.add("some-other-model", SimpleNamespace(input_tokens=10, output_tokens=10))
+    assert m.unpriced

@@ -17,6 +17,41 @@ class LLM(Protocol):
     def complete(self, *, model: str, system: str, user: str) -> str: ...
 
 
+# Claude list prices in USD per million tokens (input, output), checked 2026-11-23.
+# Used only for the rough cost estimate shown in the app; the Anthropic Console has the real bill.
+PRICES_PER_MTOK = {
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+}
+
+
+class UsageMeter:
+    """Running token count for LLM calls since the app started (thinking tokens count as output)."""
+
+    def __init__(self):
+        self.calls = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cost_usd = 0.0
+        self.unpriced = False  # True if a model without a known price was used
+
+    def add(self, model: str, usage) -> None:
+        if usage is None:
+            return
+        tin = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0) \
+            + (getattr(usage, "cache_creation_input_tokens", 0) or 0)
+        tout = getattr(usage, "output_tokens", 0) or 0
+        self.calls += 1
+        self.input_tokens += tin
+        self.output_tokens += tout
+        price = PRICES_PER_MTOK.get(model)
+        if price:
+            self.cost_usd += (tin * price[0] + tout * price[1]) / 1_000_000
+        else:
+            self.unpriced = True
+
+
 class Embedder(Protocol):
     name: str  # identifies the vector space; stores keep one collection per embedder
 
@@ -35,6 +70,7 @@ class AnthropicClient:
         import anthropic
 
         self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key, base_url=settings.anthropic_base_url)
+        self.usage = UsageMeter()
 
     @staticmethod
     def _check(resp) -> None:
@@ -55,6 +91,7 @@ class AnthropicClient:
             fallbacks="default",
         ) as stream:
             resp = stream.get_final_message()
+        self.usage.add(model, getattr(resp, "usage", None))
         self._check(resp)
         if resp.parsed_output is None:
             raise RuntimeError("Claude returned no parseable output.")
@@ -69,6 +106,7 @@ class AnthropicClient:
             betas=self._BETAS,
             fallbacks="default",
         )
+        self.usage.add(model, getattr(resp, "usage", None))
         self._check(resp)
         return "".join(b.text for b in resp.content if b.type == "text")
 
@@ -84,6 +122,7 @@ class OpenAIClient:
         from openai import OpenAI
 
         self._client = OpenAI(api_key=settings.openai_api_key)
+        self.usage = UsageMeter()
         self._embedding_model = settings.embedding_model
         self.name = f"openai-{settings.embedding_model}"
 
@@ -93,6 +132,7 @@ class OpenAIClient:
             input=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             text_format=schema,
         )
+        self.usage.add(model, getattr(resp, "usage", None))
         if resp.output_parsed is None:
             raise RuntimeError("Model returned no parseable output (possibly a refusal).")
         return resp.output_parsed
@@ -102,6 +142,7 @@ class OpenAIClient:
             model=model,
             input=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
+        self.usage.add(model, getattr(resp, "usage", None))
         return resp.output_text
 
     def embed(self, texts: list[str]) -> list[list[float]]:
