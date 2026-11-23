@@ -164,3 +164,5 @@ class Rationale(BaseModel):
     conditions: list[str] = Field(default_factory=list, description="e.g. 'heavy load', 'dust'")
     evidence: list[str] = Field(default_factory=list, description="Verified quotes from field docs")
     confidence: float = Field(ge=0, le=1)
+    method: str = Field(default="chain", description="'agent' (tool-calling) or 'chain' (fixed retrieve-then-ask)")
+    trace: list[str] = Field(default_factory=list, description="The agent's tool calls, for transparency")

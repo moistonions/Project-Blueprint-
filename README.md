@@ -34,7 +34,7 @@ vendor checklists (CSV or form) ──► tickets + meter hours ──┘   (det
 | `blueprint/rules.py` | **Deterministic** approved-OEM-baseline vs vendor schedule comparison. No LLM. |
 | `blueprint/execution.py` | **Deterministic** late/skipped check from checklist tickets and hour-meter readings |
 | `blueprint/tickets.py` | Vendor checklist CSV import (format provisional) |
-| `blueprint/rationale.py` | Retrieval + LLM agent explaining vendor extras; keeps only quotes found verbatim in the evidence |
+| `blueprint/rationale.py` | Tool-using Claude agent (search field notes / vendor docs, look up the OEM requirement, submit) explaining vendor extras, capped at 4 searches; keeps only quotes found verbatim in what the tools returned. Falls back to a fixed retrieve-then-ask chain |
 | `blueprint/rag.py` | Chat answers with numbered citations |
 | `blueprint/llm.py` | Claude (default) and OpenAI clients, local or OpenAI embeddings |
 | `blueprint/stores/structured.py` | SQLite: documents (with baseline status), tasks, tickets, findings, rationales |
@@ -79,8 +79,11 @@ the asset's usage rate (hours per month).
 
 ### Why vendors do extra work
 
-For each `vendor_addition` / `tightened_interval`, the rationale agent searches
-ticket notes and field documents and returns a reason with quotes. Quotes are
+For each `vendor_addition` / `tightened_interval`, Claude runs as a tool-using
+agent: it chooses its own searches over ticket notes, field reports and vendor
+documents (`search_field_notes`, `search_vendor_documents`), can look up the OEM
+requirement, and finishes with `submit_rationale`. Searches are capped at 4 and
+the loop at 6 requests; each tool call is shown on the Field wisdom page. Quotes are
 checked against the retrieved text; a reason with no verified quote is stored as
 **unconfirmed**. Each item also gets a status, justified / unjustified / unknown
 (only "unknown" without a verified quote). The POC shows the status; it does not
@@ -171,7 +174,6 @@ import, the full pipeline scored against the planted gaps, and every Streamlit p
 
 - Asset ID is entered at upload time; multi-asset manuals need one upload per asset for now.
 - No OCR for scanned manuals; no table-specific PDF parsing yet (text extraction handles most digital tables).
-- Rationale agent is a single retrieve-then-reason step; it can become a tool-calling agent later.
 - Checklist format is provisional; execution checks compare against the OEM baseline, not the contract.
 - No approval flow for vendor extra work yet (status is display-only).
 - No auth or multi-user separation.

@@ -745,7 +745,7 @@ elif page == "Field wisdom":
     st.header("Step 5 · Field wisdom: why vendors do more")
     page_intro(
         "keeping the reasons behind extra vendor work (more often than the OEM asks, or tasks the OEM doesn't "
-        "require), so the next team knows why. The LLM reads ticket notes and field reports and proposes a reason.",
+        "require), so the next team knows why. An AI agent decides what to search in ticket notes, field reports and vendor documents, then proposes a reason.",
         [
             "Each card is one extra task, with its status: ✅ justified, ⛔ unjustified or ❔ unknown.",
             "A reason counts as confirmed only when its quote is found word for word in the source, shown as a "
@@ -788,7 +788,11 @@ elif page == "Field wisdom":
                 st.write("Conditions: " + ", ".join(r.conditions))
             for q in r.evidence:
                 st.markdown(f"> {q}")
-            st.caption(f"Confidence {r.confidence:.0%}")
+            st.caption(f"Confidence {r.confidence:.0%} · "
+                       + ("found by the AI agent with search tools" if r.method == "agent" else "found by the fixed search chain"))
+            if r.trace:
+                with st.expander("How the agent found this"):
+                    st.markdown("\n".join(f"{i}. `{step}`" for i, step in enumerate(r.trace, 1)))
     next_step("Ask", "ask questions across all the documents, gaps and reasons.")
 
 # ---------------------------------------------------------------- Ask
