@@ -134,13 +134,24 @@ if not password_ok():
     st.stop()
 
 
-@st.cache_resource
-def get_blueprint() -> Blueprint:
+def code_version() -> str:
+    """Fingerprint of the blueprint package. When a deploy changes the code, the cached
+    Blueprint (built from the old classes) is replaced instead of being reused."""
+    from pathlib import Path
+
+    import blueprint
+
+    files = sorted(Path(blueprint.__file__).parent.rglob("*.py"))
+    return "|".join(f"{f.name}:{f.stat().st_mtime_ns}:{f.stat().st_size}" for f in files)
+
+
+@st.cache_resource(max_entries=1)
+def get_blueprint(version: str) -> Blueprint:  # noqa: ARG001  (version is the cache key)
     return Blueprint.from_settings(get_settings())
 
 
 try:
-    bp = get_blueprint()
+    bp = get_blueprint(code_version())
 except RuntimeError as e:
     st.error(f"The app couldn't start: {e}")
     st.info("Set the API key in `.env` (see `.env.example`) or as an environment variable, then restart the app.")
@@ -789,8 +800,9 @@ elif page == "Field wisdom":
             for q in r.evidence:
                 st.markdown(f"> {q}")
             st.caption(f"Confidence {r.confidence:.0%} · "
-                       + ("found by the AI agent with search tools" if r.method == "agent" else "found by the fixed search chain"))
-            if r.trace:
+                       + ("found by the AI agent with search tools" if getattr(r, "method", "chain") == "agent"
+                          else "found by the fixed search chain"))
+            if getattr(r, "trace", None):
                 with st.expander("How the agent found this"):
                     st.markdown("\n".join(f"{i}. `{step}`" for i, step in enumerate(r.trace, 1)))
     next_step("Ask", "ask questions across all the documents, gaps and reasons.")
