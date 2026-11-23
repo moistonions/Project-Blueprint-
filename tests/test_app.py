@@ -107,3 +107,17 @@ def test_tour_and_next_buttons_move_between_pages(app):
     next(b for b in app.button if b.label.startswith("Go to 5")).click().run()
     assert app.sidebar.radio[0].value == "Field wisdom"
     assert not app.exception
+
+
+def test_ask_example_question_and_clear_chat(app):
+    app.sidebar.radio[0].set_value("Ask").run()
+    next(b for b in app.button if b.label == "Which OEM tasks are missing?").click().run()
+    assert not app.exception
+    assert any("answer [1]" in m.value for m in app.markdown)
+    next(b for b in app.button if b.label == "🗑️ Clear chat").click().run()
+    assert not any("answer [1]" in m.value for m in app.markdown)
+
+
+def test_gap_report_summary_card(app):
+    app.sidebar.radio[0].set_value("Gap report").run()
+    assert any("compliance gaps for" in m.value for m in app.markdown)

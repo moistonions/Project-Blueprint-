@@ -81,6 +81,12 @@ NAV_LABELS = {
     "Ask": "6 · Ask a question",
     "Methodology": "📘 Methodology",
 }
+# Short button label -> full question sent to the chat.
+EXAMPLE_QUESTIONS = {
+    "Which OEM tasks are missing?": "Which OEM tasks is the vendor missing?",
+    "Exhaust pipe inspection interval?": "How often must the exhaust pipes be inspected?",
+    "Why descale the mixing elbow?": "Why does the vendor descale the exhaust mixing elbow?",
+}
 NAV_CAPTIONS = {
     "About Us": "What the app does and how to use it",
     "Ingest": "Load the demo or upload manuals and contracts",
@@ -173,6 +179,14 @@ st.sidebar.caption(
     f"🟢 LLM: {PROVIDER_NAMES.get(bp.settings.llm_provider, bp.settings.llm_provider)} "
     f"({bp.settings.chat_model}), key loaded"
 )
+_meter = getattr(bp.llm, "usage", None)
+if _meter is not None:
+    _cost = f"≈ ${_meter.cost_usd:.2f}" + ("+" if _meter.unpriced else "")
+    st.sidebar.caption(
+        f"🧮 LLM use since the app started: {_meter.calls} calls, {_meter.input_tokens:,} input + "
+        f"{_meter.output_tokens:,} output tokens, {_cost} at list price.",
+        help="A rough estimate from the token counts the API returns. Your Anthropic Console shows the actual bill.",
+    )
 
 
 @contextmanager
@@ -627,6 +641,23 @@ elif page == "Gap report":
         st.stop()
 
     failed = sum(f.type == FindingType.NEEDS_REVIEW for f in findings)
+    n_crit = sum(f.severity == Severity.CRITICAL for f in findings)
+    n_warn = sum(f.severity == Severity.WARNING for f in findings)
+    n_info = sum(f.severity == Severity.INFO for f in findings)
+    by_type: dict[FindingType, int] = {}
+    for f in findings:
+        if f.severity != Severity.INFO:
+            by_type[f.type] = by_type.get(f.type, 0) + 1
+    with st.container(border=True):
+        st.markdown(
+            f"### {n_crit + n_warn} compliance gaps for {asset_id}\n"
+            f"🔴 **{n_crit} critical** and 🟠 **{n_warn} warnings** where the vendor does less than the OEM."
+        )
+        if by_type:
+            st.markdown("Breakdown: " + " · ".join(f"{TYPE_LABELS[t]} ({n})" for t, n in by_type.items()))
+        if n_info:
+            st.caption(f"🔵 Plus {n_info} item(s) where the vendor does *more* than the OEM. "
+                       "Their reasons are on step 5, Field wisdom.")
     cols = st.columns(4)
     for col, sev in zip(cols, Severity):
         col.metric(f"{SEVERITY_ICON[sev]} {sev.value.title()}", sum(f.severity == sev for f in findings))
@@ -772,15 +803,29 @@ elif page == "Ask":
             "Open **Sources** under an answer to see where it came from.",
         ],
     )
-    st.caption("Try: *Which OEM tasks is the vendor missing?* · *How often must the exhaust pipes be inspected?* · "
-               "*Why does the vendor descale the exhaust mixing elbow?*")
     asset_id = asset_picker("ask_asset", allow_all=True)
-    history = st.session_state.setdefault("chat", [])
+    # One conversation per asset filter, so switching asset starts a clean chat.
+    chat_key = f"chat_{asset_id or 'all'}"
+    history = st.session_state.setdefault(chat_key, [])
+
+    def _queue(q: str) -> None:
+        st.session_state["queued_question"] = q
+
+    def _clear() -> None:
+        st.session_state[chat_key] = []
+
+    st.markdown("**Try an example** :gray[(each question is one LLM call)]")
+    ex_cols = st.columns(len(EXAMPLE_QUESTIONS) + 1)
+    for i, (col, (label, q)) in enumerate(zip(ex_cols, EXAMPLE_QUESTIONS.items())):
+        col.button(label, key=f"example_{i}", on_click=_queue, args=(q,), help=q, width="stretch")
+    ex_cols[-1].button("🗑️ Clear chat", key="clear_chat", on_click=_clear, width="stretch")
+
     for msg in history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    if question := st.chat_input("e.g. Why does the vendor clean the radiator fins every 3 months?"):
+    typed = st.chat_input("Ask about these documents, e.g. Why does the vendor charge the battery monthly?")
+    if question := (typed or st.session_state.pop("queued_question", None)):
         history.append({"role": "user", "content": question})
         with st.chat_message("user"):
             st.markdown(question)
