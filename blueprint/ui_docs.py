@@ -28,6 +28,7 @@ def show_notice(expanded: bool = False) -> None:
 # ---------------------------------------------------------------------------- About Us
 
 def render_about() -> None:
+    """Render the About Us page: problem, objectives, scope, data sources, features."""
     st.header("About Us")
     st.markdown(
         "**Project Blueprint** is a proof of concept (POC) that checks whether vendor maintenance matches what the "
@@ -173,6 +174,7 @@ digraph {
 
 
 def render_methodology() -> None:
+    """Render the Methodology page: data flow, one flowchart per use case, safeguards, evaluation."""
     st.header("Methodology")
     st.markdown(
         "Project Blueprint is a hybrid structured / unstructured RAG pipeline. The LLM reads documents and explains; "

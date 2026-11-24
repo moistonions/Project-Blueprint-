@@ -64,6 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_findings_asset ON findings(asset_id, vendor);
 
 
 class StructuredStore:
+    """SQLite store for documents, extracted tasks, checklist tickets, findings and rationales."""
     def __init__(self, path: Path | str):
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -91,6 +92,7 @@ class StructuredStore:
         )
 
     def documents(self, kind: SourceKind | None = None) -> list[Document]:
+        """List documents, optionally only one kind."""
         sql = "SELECT doc_id, filename, kind, asset_id, vendor, is_sample, baseline_status FROM documents"
         args: list = []
         if kind:
@@ -102,6 +104,7 @@ class StructuredStore:
         ]
 
     def document_tasks(self, doc_id: str) -> list[MaintenanceTask]:
+        """Tasks extracted from one document."""
         rows = self._conn.execute("SELECT id, data FROM tasks WHERE doc_id = ? ORDER BY id", (doc_id,))
         return [MaintenanceTask.model_validate_json(r[1]).model_copy(update={"id": r[0]}) for r in rows]
 
@@ -113,12 +116,14 @@ class StructuredStore:
             self._conn.execute("UPDATE documents SET baseline_status = 'draft' WHERE doc_id = ?", (doc_id,))
 
     def set_baseline_status(self, doc_id: str, status: BaselineStatus) -> None:
+        """Set a document's sign-off status (e.g. approved)."""
         with self._conn:
             self._conn.execute("UPDATE documents SET baseline_status = ? WHERE doc_id = ?", (status.value, doc_id))
 
     def tasks(
         self, asset_id: str, kind: SourceKind, vendor: str | None = None, *, approved_only: bool = False
     ) -> list[MaintenanceTask]:
+        """Tasks for an asset from one kind of source; `approved_only` limits OEM tasks to signed-off baselines."""
         sql = (
             "SELECT t.id, t.data FROM tasks t JOIN documents d ON d.doc_id = t.doc_id "
             "WHERE t.asset_id = ? AND d.kind = ?"
@@ -135,6 +140,7 @@ class StructuredStore:
         ]
 
     def assets(self) -> list[str]:
+        """All asset ids that have documents or tickets."""
         rows = self._conn.execute(
             "SELECT asset_id FROM documents UNION SELECT asset_id FROM tickets ORDER BY asset_id"
         )
@@ -150,6 +156,7 @@ class StructuredStore:
 
     # tickets -----------------------------------------------------------
     def add_tickets(self, tickets: list[Ticket]) -> None:
+        """Save checklist tickets."""
         with self._conn:
             self._conn.executemany(
                 "INSERT INTO tickets (asset_id, vendor, date, data) VALUES (?,?,?,?)",
@@ -157,12 +164,14 @@ class StructuredStore:
             )
 
     def delete_tickets(self, asset_id: str, *, samples_only: bool = False) -> None:
+        """Delete an asset's tickets (or only its sample tickets)."""
         with self._conn:
             rows = self._conn.execute("SELECT id, data FROM tickets WHERE asset_id = ?", (asset_id,)).fetchall()
             ids = [r[0] for r in rows if not samples_only or Ticket.model_validate_json(r[1]).is_sample]
             self._conn.executemany("DELETE FROM tickets WHERE id = ?", [(i,) for i in ids])
 
     def tickets(self, asset_id: str, vendor: str | None = None) -> list[Ticket]:
+        """Checklist tickets for an asset, oldest first."""
         sql, args = "SELECT data FROM tickets WHERE asset_id = ?", [asset_id]
         if vendor is not None:
             sql, args = sql + " AND vendor = ?", [*args, vendor]
@@ -170,6 +179,7 @@ class StructuredStore:
 
     # findings / rationales ---------------------------------------------
     def replace_findings(self, asset_id: str, findings: list[Finding]) -> None:
+        """Replace an asset's findings with a new analysis run."""
         with self._conn:
             self._conn.execute("DELETE FROM findings WHERE asset_id = ?", (asset_id,))
             self._conn.executemany(
@@ -179,12 +189,14 @@ class StructuredStore:
             )
 
     def findings(self, asset_id: str | None = None) -> list[Finding]:
+        """Stored findings, optionally for one asset."""
         sql, args = "SELECT data FROM findings", []
         if asset_id:
             sql, args = sql + " WHERE asset_id = ?", [asset_id]
         return [Finding.model_validate_json(r[0]) for r in self._conn.execute(sql + " ORDER BY id", args)]
 
     def add_rationale(self, r: Rationale) -> None:
+        """Save a rationale, replacing any earlier one for the same task."""
         with self._conn:
             self._conn.execute(
                 "DELETE FROM rationales WHERE asset_id = ? AND vendor IS ? AND task_key = ?",
@@ -196,6 +208,7 @@ class StructuredStore:
             )
 
     def rationales(self, asset_id: str | None = None) -> list[Rationale]:
+        """Stored rationales, optionally for one asset."""
         sql, args = "SELECT data FROM rationales", []
         if asset_id:
             sql, args = sql + " WHERE asset_id = ?", [asset_id]

@@ -19,6 +19,11 @@ from blueprint.tickets import ticket_text
 
 
 class Blueprint:
+    """Main entry point used by the UI and scripts.
+
+    Ties together the LLM, the SQLite store and the vector store:
+    ingest -> extract -> human sign-off -> compare (rules) -> explain (rationale agent) -> index for Ask.
+    """
     def __init__(self, settings: Settings, llm: LLM, structured: StructuredStore, vectors: VectorStore):
         self.settings = settings
         self.llm = llm
@@ -27,6 +32,7 @@ class Blueprint:
 
     @classmethod
     def from_settings(cls, settings: Settings) -> Blueprint:
+        """Build a Blueprint with the LLM, embedder and stores chosen in settings."""
         from blueprint.llm import make_embedder, make_llm
         from blueprint.stores.vector import make_vector_store
 
@@ -117,6 +123,7 @@ class Blueprint:
         )
 
     def approve_baseline(self, doc_id: str) -> None:
+        """Mark an OEM document's task list as signed off, so it is used as the baseline."""
         self.db.set_baseline_status(doc_id, BaselineStatus.APPROVED)
 
     def usage_rate(self, asset_id: str) -> float | None:
@@ -199,4 +206,5 @@ class Blueprint:
 
     # ------------------------------------------------------------------ chat
     def ask(self, question: str, asset_id: str | None = None) -> rag.Answer:
+        """Answer a question from the indexed documents, findings and rationales (RAG with citations)."""
         return rag.ask(self.llm, self.vectors, question, model=self.settings.chat_model, asset_id=asset_id)

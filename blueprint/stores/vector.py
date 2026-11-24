@@ -18,6 +18,7 @@ Metadata = dict[str, str | int | float | bool]
 
 @dataclass
 class Record:
+    """Text plus metadata to index."""
     id: str
     text: str
     metadata: Metadata = field(default_factory=dict)
@@ -25,6 +26,7 @@ class Record:
 
 @dataclass
 class Hit:
+    """A search result with its similarity score (higher is closer)."""
     id: str
     text: str
     metadata: Metadata
@@ -32,6 +34,7 @@ class Hit:
 
 
 class VectorStore(Protocol):
+    """Interface for the vector index, so Chroma can be swapped for pgvector later."""
     def upsert(self, records: list[Record]) -> None: ...
 
     def query(self, text: str, k: int = 5, where: Metadata | None = None) -> list[Hit]: ...
@@ -48,6 +51,7 @@ def _where(filters: Metadata | None) -> dict | None:
 
 
 class ChromaStore:
+    """Chroma implementation of VectorStore (persistent on disk, or in memory when path is None)."""
     def __init__(self, path: Path | str | None, embedder: Embedder, collection: str = "blueprint"):
         import chromadb
 
@@ -59,6 +63,7 @@ class ChromaStore:
         self._embedder = embedder
 
     def upsert(self, records: list[Record]) -> None:
+        """Add or replace records by id."""
         if not records:
             return
         self._col.upsert(
@@ -69,6 +74,7 @@ class ChromaStore:
         )
 
     def query(self, text: str, k: int = 5, where: Metadata | None = None) -> list[Hit]:
+        """Return the `k` closest records to `text`, optionally filtered by metadata."""
         if self._col.count() == 0:
             return []
         res = self._col.query(
@@ -83,10 +89,12 @@ class ChromaStore:
         ]
 
     def delete(self, where: Metadata) -> None:
+        """Delete records matching the metadata filter."""
         self._col.delete(where=_where(where))
 
 
 def make_vector_store(backend: str, path: Path, embedder: Embedder) -> VectorStore:
+    """Create the configured vector store backend."""
     if backend == "chroma":
         # Vectors from different embedding models aren't comparable, so each gets its own collection.
         return ChromaStore(path, embedder, collection=f"blueprint-{embedder.name}")

@@ -147,6 +147,7 @@ def code_version() -> str:
 
 @st.cache_resource(max_entries=1)
 def get_blueprint(version: str) -> Blueprint:  # noqa: ARG001  (version is the cache key)
+    """Build the pipeline once per code version and reuse it across reruns (st.cache_resource)."""
     return Blueprint.from_settings(get_settings())
 
 
@@ -225,10 +226,12 @@ def run_analysis(asset_id: str):
 
 
 def task_label(action: str, component: str) -> str:
+    """Short human label for a task, e.g. 'replace fuel filter'."""
     return f"{action} {component}".strip()
 
 
 def asset_picker(key: str, allow_all: bool = False) -> str | None:
+    """Asset dropdown for a page. Returns the chosen asset id, None for 'All assets', or None if none exist."""
     options = (["All assets"] if allow_all else []) + assets
     if not options:
         st.info("Nothing to show yet: no documents have been loaded.")
@@ -263,6 +266,7 @@ def next_step(target: str, why: str) -> None:
 
 
 def sample_badge(is_sample: bool) -> str:
+    """Prefix shown on rows that come from synthetic sample data."""
     return "🧪 SAMPLE · " if is_sample else ""
 
 
@@ -689,6 +693,7 @@ elif page == "Gap report":
     shown = [f for f in findings if f.severity in show]
 
     def quote(t: MaintenanceTask | None) -> str:
+        """Source quote of a task, or empty text when there is no task on that side."""
         return t.source_quote if t else ""
 
     df = pd.DataFrame(
@@ -780,6 +785,7 @@ elif page == "Field wisdom":
                                                    format_intervals(t.intervals)))
 
     def fallback_label(key: str) -> str:
+        """Readable label for a 'component|action' task key when no task object is available."""
         component, _, action = key.partition("|")
         return task_label(action, component)
 

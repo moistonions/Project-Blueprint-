@@ -25,6 +25,7 @@ def _env(name: str) -> str | None:
 
 @dataclass(frozen=True)
 class Settings:
+    """All runtime settings, read from environment variables (or .env / Streamlit secrets) with POC defaults."""
     # "anthropic" (Claude, default) or "openai". Claude has no embeddings API, so with
     # Claude the vector index uses a small local embedding model (no key needed).
     llm_provider: str = field(default_factory=lambda: os.getenv("BLUEPRINT_LLM_PROVIDER", "anthropic").lower())
@@ -62,12 +63,15 @@ class Settings:
 
     @property
     def sqlite_path(self) -> Path:
+        """SQLite database file for structured data."""
         return self.data_dir / "blueprint.db"
 
     @property
     def chroma_path(self) -> Path:
+        """Folder for the Chroma vector index."""
         return self.data_dir / "chroma"
 
 
 def get_settings() -> Settings:
+    """Return a fresh Settings object built from the current environment."""
     return Settings()

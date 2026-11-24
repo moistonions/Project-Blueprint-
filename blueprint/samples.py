@@ -20,6 +20,7 @@ SAMPLE_VENDOR = "Example Power Services Ltd (fictional)"
 
 
 def answer_key() -> dict:
+    """Planted gaps for the synthetic sample set, used to score a run."""
     return json.loads((SAMPLE_DIR / "planted_gaps.json").read_text())
 
 

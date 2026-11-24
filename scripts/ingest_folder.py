@@ -19,6 +19,7 @@ from blueprint.pipeline import Blueprint  # noqa: E402
 
 
 def main() -> None:
+    """Parse arguments, ingest every supported file in the folder, then run the analysis."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("folder", type=Path)
     ap.add_argument("--kind", choices=[k.value for k in SourceKind], required=True)

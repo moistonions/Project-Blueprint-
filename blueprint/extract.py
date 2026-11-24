@@ -120,6 +120,12 @@ def extract_tasks(
     asset_id: str,
     max_chars: int = 24_000,
 ) -> list[MaintenanceTask]:
+    """Use the LLM to pull maintenance tasks out of a document.
+
+    The text is sent in page-tagged windows of at most `max_chars`. Each window's output is forced
+    into the ExtractionResult schema, then checked in code: intervals not stated in the quoted page
+    are dropped and the task is flagged for review. Duplicate tasks (e.g. table + body text) are merged.
+    """
     system = _SYSTEM.format(kind_desc=_KIND_DESC[kind], asset_id=asset_id)
     seen: dict[str, MaintenanceTask] = {}
     page_text: dict[int, str] = {}

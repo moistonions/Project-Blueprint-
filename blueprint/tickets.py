@@ -19,6 +19,7 @@ CSV_TEMPLATE = "date,asset_id,vendor,component,action,meter_hours,time_spent_hou
 
 
 def parse_csv(data: bytes, *, vendor: str | None = None, is_sample: bool = False) -> list[Ticket]:
+    """Parse a vendor checklist CSV into Ticket records (one per task line)."""
     reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig")))
     cols = {c.strip() for c in reader.fieldnames or []}
     if missing := REQUIRED_COLUMNS - cols:

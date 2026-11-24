@@ -13,6 +13,7 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class LLM(Protocol):
+    """What the pipeline needs from an LLM provider: structured output (parse) and free text (complete)."""
     def parse(self, *, model: str, system: str, user: str, schema: type[T]) -> T: ...
 
     def complete(self, *, model: str, system: str, user: str) -> str: ...
@@ -38,6 +39,7 @@ class UsageMeter:
         self.unpriced = False  # True if a model without a known price was used
 
     def add(self, model: str, usage) -> None:
+        """Add one response's token usage and estimated cost."""
         if usage is None:
             return
         tin = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0) \
@@ -65,6 +67,7 @@ class Tool:
     required: list[str] = field(default_factory=list)
 
     def schema(self) -> dict:
+        """Tool definition in the Anthropic Messages API format (strict JSON schema)."""
         return {
             "name": self.name,
             "description": self.description,
@@ -79,6 +82,7 @@ class Tool:
 
 
 class Embedder(Protocol):
+    """Turns text into vectors for the vector store."""
     name: str  # identifies the vector space; stores keep one collection per embedder
 
     def embed(self, texts: list[str]) -> list[list[float]]: ...
@@ -106,6 +110,7 @@ class AnthropicClient:
             raise RuntimeError("Claude's reply hit max_tokens; try a smaller document section.")
 
     def parse(self, *, model: str, system: str, user: str, schema: type[T]) -> T:
+        """Return the model's answer validated against `schema` (Pydantic) via structured outputs."""
         # Streamed so a long task list from a big manual doesn't hit the HTTP timeout.
         with self._client.beta.messages.stream(
             model=model,
@@ -167,6 +172,7 @@ class AnthropicClient:
         return max_turns
 
     def complete(self, *, model: str, system: str, user: str) -> str:
+        """Return the model's plain-text answer."""
         resp = self._client.beta.messages.create(
             model=model,
             max_tokens=16000,
@@ -196,6 +202,7 @@ class OpenAIClient:
         self.name = f"openai-{settings.embedding_model}"
 
     def parse(self, *, model: str, system: str, user: str, schema: type[T]) -> T:
+        """Return the model's answer validated against `schema` (OpenAI structured outputs)."""
         resp = self._client.responses.parse(
             model=model,
             input=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -207,6 +214,7 @@ class OpenAIClient:
         return resp.output_parsed
 
     def complete(self, *, model: str, system: str, user: str) -> str:
+        """Return the model's plain-text answer."""
         resp = self._client.responses.create(
             model=model,
             input=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -215,6 +223,7 @@ class OpenAIClient:
         return resp.output_text
 
     def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts with the OpenAI embeddings API, in batches."""
         out: list[list[float]] = []
         for i in range(0, len(texts), 128):
             resp = self._client.embeddings.create(model=self._embedding_model, input=texts[i : i + 128])
@@ -236,14 +245,17 @@ class LocalEmbedder:
         self._fn = DefaultEmbeddingFunction()
 
     def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts locally with all-MiniLM-L6-v2."""
         return [list(map(float, v)) for v in self._fn(texts)]
 
 
 def make_llm(settings: Settings) -> LLM:
+    """Pick the LLM client from settings.llm_provider ('anthropic' by default, or 'openai')."""
     return AnthropicClient(settings) if settings.llm_provider == "anthropic" else OpenAIClient(settings)
 
 
 def make_embedder(settings: Settings, llm: LLM) -> Embedder:
+    """Pick the embedder from settings.embeddings ('local' by default, or 'openai')."""
     if settings.embeddings == "local":
         return LocalEmbedder()
     if settings.embeddings == "openai":

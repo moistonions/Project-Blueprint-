@@ -36,6 +36,7 @@ class HourMeter:
         return (h1 - h0) / days * (365.25 / 12) if days > 0 else None
 
     def at(self, d: date) -> float | None:
+        """Estimated hour-meter reading on a date: interpolated between readings, extrapolated outside them."""
         if not self.points:
             return None
         if len(self.points) == 1:
@@ -64,6 +65,11 @@ def check_execution(
     tolerance: float,
     as_of: date | None = None,
 ) -> list[Finding]:
+    """Check vendor checklists against the approved OEM baseline: was each recurring task done on time?
+
+    Uses both calendar and hour-meter intervals (whichever comes first) and returns an
+    EXECUTION_GAP finding for each task done late or not done by `as_of`.
+    """
     tickets = sorted((t for t in tickets if t.asset_id == asset_id), key=lambda t: t.date)
     if not tickets:
         return []
