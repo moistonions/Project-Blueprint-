@@ -113,6 +113,7 @@ GAPS = [
 
 
 def iv(pairs):
+    """Build an interval list from (value, unit) pairs."""
     return [{"value": v, "unit": u} for v, u in pairs]
 
 

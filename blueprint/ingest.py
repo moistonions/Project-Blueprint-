@@ -14,18 +14,21 @@ SUPPORTED_SUFFIXES = {".pdf", ".txt", ".md", ".csv", ".eml"}
 
 @dataclass
 class Page:
+    """One page of extracted text, numbered from 1 so findings can cite the page."""
     number: int  # 1-based
     text: str
 
 
 @dataclass
 class Chunk:
+    """A chunk of text sent to the vector index, with the page it came from."""
     text: str
     page: int
     index: int
 
 
 def read_pages(filename: str, data: bytes) -> list[Page]:
+    """Read a PDF or text upload into numbered pages (text files are split on page markers)."""
     suffix = Path(filename).suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
         raise ValueError(f"Unsupported file type '{suffix}'. Supported: {sorted(SUPPORTED_SUFFIXES)}")

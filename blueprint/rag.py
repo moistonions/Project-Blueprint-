@@ -21,11 +21,13 @@ _SYSTEM += UNTRUSTED_RULE
 
 @dataclass
 class Answer:
+    """A chat answer and the retrieved chunks it was based on."""
     text: str
     sources: list[Hit]
 
 
 def source_label(h: Hit) -> str:
+    """Readable label for a retrieved source, shown under the answer."""
     m = h.metadata
     if m.get("type") == "finding":
         return f"Gap finding · {m.get('asset_id')} · {m.get('vendor') or 'n/a'}"
@@ -37,6 +39,11 @@ def source_label(h: Hit) -> str:
 
 
 def ask(llm: LLM, store: VectorStore, question: str, *, model: str, asset_id: str | None = None, k: int = 8) -> Answer:
+    """Answer a question using only retrieved context.
+
+    Checks the question, retrieves the top `k` chunks (optionally for one asset), numbers them,
+    wraps them as untrusted data, and asks the LLM to answer with [n] citations.
+    """
     question = check_question(question)
     where: Metadata | None = {"asset_id": asset_id} if asset_id else None
     hits = store.query(question, k=k, where=where)

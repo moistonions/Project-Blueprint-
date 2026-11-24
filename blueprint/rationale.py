@@ -110,7 +110,9 @@ def explain_with_agent(llm, store: VectorStore, finding: Finding, *, model: str,
     searches = [0]
 
     def search(kind: str, label: str):
+        """Make a search tool over one kind of indexed text (field notes or vendor documents)."""
         def run(args: dict) -> str:
+            """Run the search, enforce the search cap, remember hits for quote checking, return wrapped results."""
             query = str(args.get("query", "")).strip()[:200]
             if searches[0] >= MAX_SEARCHES:
                 trace.append(f'{label}("{query}") refused: search limit reached')
@@ -129,6 +131,7 @@ def explain_with_agent(llm, store: VectorStore, finding: Finding, *, model: str,
         return run
 
     def oem_requirement(_: dict) -> str:
+        """Tool: return the OEM requirement and the vendor's version of the task."""
         trace.append("get_oem_requirement()")
         o, v = finding.oem_task, finding.vendor_task
         oem = (f"OEM: {o.action} {o.component}, intervals {[f'{i.value:g} {i.unit.value}' for i in o.intervals]}"
@@ -138,6 +141,7 @@ def explain_with_agent(llm, store: VectorStore, finding: Finding, *, model: str,
         return wrap("evidence", f"{oem}\n{ven}")
 
     def submit(args: dict) -> str:
+        """Tool: record the agent's final rationale draft (verified against the evidence afterwards)."""
         submitted.append(_Draft(
             rationale=str(args.get("rationale", "")),
             status=args.get("status", "unknown"),

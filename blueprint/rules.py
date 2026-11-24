@@ -30,6 +30,7 @@ COMPONENT_SIMILARITY_THRESHOLD = 0.8
 
 @dataclass
 class Match:
+    """An OEM task paired with a vendor task, with how and how confidently they were matched."""
     oem: MaintenanceTask
     vendor: MaintenanceTask
     basis: MatchBasis
@@ -37,6 +38,11 @@ class Match:
 
 
 def candidate_match(o: MaintenanceTask, v: MaintenanceTask) -> tuple[MatchBasis, float] | None:
+    """Could vendor task `v` be the same as OEM task `o`?
+
+    Actions must agree. Then: same task key (1.0) > shared part number (0.95) > similar component name (<=0.9).
+    Returns (basis, confidence) or None.
+    """
     if canonical_action(o.action) != canonical_action(v.action):
         return None
     if task_key(o) == task_key(v):
@@ -79,6 +85,7 @@ def _fmt(task: MaintenanceTask) -> str:
 
 
 def tolerance_for(task: MaintenanceTask, tolerance: float) -> float:
+    """Allowed interval stretch for a task: zero for safety-critical tasks, otherwise the given tolerance."""
     return 0.0 if task.safety_critical else tolerance
 
 
@@ -90,9 +97,16 @@ def compare(
     vendor_name: str | None,
     tolerance: float = DEFAULT_TOLERANCE,
 ) -> list[Finding]:
+    """Deterministic OEM-vs-vendor comparison. No LLM involved, so results are repeatable.
+
+    Flags missing tasks, longer intervals (warning within tolerance, critical beyond it),
+    spec/part mismatches and untracked interval bases; also records tighter intervals and extra
+    vendor tasks (INFO), which feed the rationale step.
+    """
     findings: list[Finding] = []
 
     def add(type_, sev, o, v, msg, m: Match | None = None):
+        """Append one finding."""
         findings.append(
             Finding(
                 asset_id=asset_id,

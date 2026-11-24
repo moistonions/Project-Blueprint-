@@ -22,14 +22,17 @@ SCENARIO_DIR = ROOT / "data" / "scenarios"
 
 
 def scenario_path(name: str) -> Path:
+    """Folder holding a scenario's files."""
     return SCENARIO_DIR / name
 
 
 def answer_key(name: str) -> dict:
+    """Planted gaps for a scenario, used to score a run."""
     return json.loads((scenario_path(name) / "planted_gaps.json").read_text())
 
 
 def baseline_tasks(name: str) -> tuple[str, list[MaintenanceTask]]:
+    """The scenario's proposed OEM baseline as (document name, tasks)."""
     data = json.loads((scenario_path(name) / "proposed_baseline.json").read_text())
     tasks = [
         MaintenanceTask(

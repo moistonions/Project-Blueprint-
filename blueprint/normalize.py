@@ -14,6 +14,7 @@ from blueprint.models import Interval, IntervalUnit, MaintenanceTask
 
 
 class Dimension(str, Enum):
+    """What an interval measures, so only like with like is compared."""
     CALENDAR = "calendar"  # normalized to days
     USAGE = "usage"  # normalized to operating hours
     DISTANCE = "distance"  # normalized to km
@@ -33,6 +34,7 @@ _TO_BASE: dict[IntervalUnit, tuple[Dimension, float]] = {
 
 
 def to_base(interval: Interval) -> tuple[Dimension, float]:
+    """Convert an interval to its base unit (days, hours, km or cycles)."""
     dim, factor = _TO_BASE[interval.unit]
     return dim, interval.value * factor
 
@@ -83,6 +85,7 @@ def _tokens(text: str) -> list[str]:
 
 
 def canonical_action(action: str) -> str:
+    """Map an action verb to a canonical verb (e.g. 'change' -> 'replace', 'check' -> 'inspect')."""
     toks = _tokens(action)
     if not toks:
         return ""
@@ -116,6 +119,7 @@ _ABBREVIATIONS = {
 
 
 def component_tokens(component: str) -> frozenset[str]:
+    """Normalised word set for a component name (lower case, synonyms merged, filler words dropped)."""
     out = set()
     for w in _tokens(component):
         w = _ABBREVIATIONS.get(w, w)
@@ -126,6 +130,7 @@ def component_tokens(component: str) -> frozenset[str]:
 
 
 def canonical_component(component: str) -> str:
+    """Order-independent component name, used in task keys."""
     return " ".join(sorted(component_tokens(component)))
 
 
@@ -154,6 +159,7 @@ def component_similarity(a: str, b: str) -> float:
 
 
 def task_key(task: MaintenanceTask) -> str:
+    """Key identifying the same task across documents: 'component|action' after normalising."""
     return f"{canonical_component(task.component)}|{canonical_action(task.action)}"
 
 
@@ -163,6 +169,7 @@ def canonical_spec(spec: str | None) -> str:
 
 
 def canonical_parts(part_ids: list[str]) -> set[str]:
+    """Normalised part numbers, for matching tasks that share a part."""
     return {canonical_spec(p) for p in part_ids if canonical_spec(p)}
 
 
@@ -181,6 +188,7 @@ _UNIT_ALIASES: dict[str, IntervalUnit] = {
 def format_intervals(intervals: list[Interval]) -> str:
     """[250 h, 1 month] -> '250 hours; 1 month' (singular for 1, so it reads naturally)."""
     def one(iv: Interval) -> str:
+        """Format a single interval."""
         unit = iv.unit.value
         if iv.value == 1 and unit.endswith("s"):
             unit = unit[:-1]

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 
 class SourceKind(str, Enum):
+    """Where a document or task came from."""
     OEM = "oem"  # OEM manual / maintenance specification
     VENDOR = "vendor"  # Vendor contract / service schedule
     FIELD = "field"  # Free-text field material: emails, reports
@@ -22,6 +23,7 @@ class BaselineStatus(str, Enum):
 
 
 class IntervalUnit(str, Enum):
+    """Units a maintenance interval can be stated in."""
     HOURS = "hours"  # operating / run hours
     DAYS = "days"
     WEEKS = "weeks"
@@ -33,6 +35,7 @@ class IntervalUnit(str, Enum):
 
 
 class Interval(BaseModel):
+    """One interval, e.g. 250 hours. A task can have several (whichever comes first)."""
     value: float = Field(gt=0)
     unit: IntervalUnit
 
@@ -60,6 +63,7 @@ class ExtractedTask(BaseModel):
 
 
 class MaintenanceTask(ExtractedTask):
+    """An extracted task as stored, with its document, asset and sign-off fields."""
     id: int | None = None  # database row id
     safety_critical: bool = False  # set by a person at baseline sign-off; zero tolerance
 
@@ -71,6 +75,7 @@ class ExtractionResult(BaseModel):
 
 
 class Document(BaseModel):
+    """An ingested document and, for OEM manuals, its baseline sign-off status."""
     doc_id: str
     filename: str
     kind: SourceKind
@@ -94,10 +99,12 @@ class Ticket(BaseModel):
     is_sample: bool = False
 
     def as_task(self) -> MaintenanceTask:
+        """This checklist line as a MaintenanceTask, so it can be matched to OEM tasks."""
         return MaintenanceTask(asset_id=self.asset_id, component=self.component, action=self.action)
 
 
 class FindingType(str, Enum):
+    """Kinds of gap finding produced by the rules engine and checklist checks."""
     MISSING_TASK = "missing_task"  # OEM task absent from vendor schedule
     LONGER_INTERVAL = "longer_interval"  # vendor interval longer than OEM, within tolerance
     BEYOND_TOLERANCE = "beyond_tolerance"  # vendor interval longer than OEM beyond tolerance
@@ -122,18 +129,21 @@ GAP_TYPES = {
 
 
 class Severity(str, Enum):
+    """How serious a finding is."""
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"
 
 
 class MatchBasis(str, Enum):
+    """How an OEM task was paired with a vendor task (shown as match confidence in the report)."""
     TASK_KEY = "same task"
     PART_NUMBER = "shared part number"
     SIMILAR_NAME = "similar component name"
 
 
 class Finding(BaseModel):
+    """One compliance finding: the OEM task, the vendor task (if any), and what differs."""
     asset_id: str
     vendor: str | None
     type: FindingType
@@ -147,6 +157,7 @@ class Finding(BaseModel):
 
 
 class ExtraWorkStatus(str, Enum):
+    """Outcome of the rationale step for extra vendor work."""
     JUSTIFIED = "justified"
     UNJUSTIFIED = "unjustified"
     UNKNOWN = "unknown"
